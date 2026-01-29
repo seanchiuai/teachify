@@ -76,7 +76,7 @@ GEMINI_API_KEY=...
 
 **Always:**
 - Test every change before committing
-- Commit after every small change (when tests pass)
+- Commit after every small change
 - Sacrifice grammar for conciseness
 - Only work on current phase
 
