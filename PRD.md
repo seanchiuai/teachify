@@ -105,10 +105,10 @@ Students sort items into 2-3 groups. Tests ability to distinguish and classify.
 |-------|------------|---------|
 | Frontend | Next.js 14 | Single app for teacher and student views |
 | Backend | Next.js API Routes | Game creation, answer submission |
-| Database | Supabase (Postgres) | Game sessions, players, answers |
-| Real-time | Supabase Realtime | Game state sync, presence |
-| File Storage | Supabase Storage | Uploaded lesson materials |
-| AI | Claude API | Content analysis, question generation |
+| Database | Convex | Game sessions, players, answers |
+| Real-time | Convex Realtime | Game state sync, presence |
+| File Storage | Convex Storage | Uploaded lesson materials | 
+| AI | Gemini API | Content analysis, question generation |
 
 ### Data Model
 
@@ -173,9 +173,9 @@ Each question object contains: `type` (multiple_choice | ordering | categorizati
 
 ## Development Timeline (Hackathon)
 
-- **Hours 1-2:** Supabase setup, database schema, basic Next.js routes, file upload
-- **Hours 3-4:** Claude API integration, prompt engineering, question generation
-- **Hours 5-6:** Real-time sync with Supabase, game state machine, lobby system
+- **Hours 1-2:** Convex setup, database schema, basic Next.js routes, file upload
+- **Hours 3-4:** Gemini API integration, prompt engineering, question generation
+- **Hours 5-6:** Real-time sync with Convex, game state machine, lobby system
 - **Hours 7-8:** Student UI, teacher controls, leaderboard, answer submission
 - **Hours 9-10:** Polish, edge cases, demo preparation, bug fixes
 

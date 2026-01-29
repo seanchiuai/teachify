@@ -1,0 +1,63 @@
+# LessonPlay Development Progress Tracker
+# This file tracks which phase of development is currently active
+
+current_phase:
+  phase: 1
+  name: "Project Setup & Upload"
+  description: "Initialize Next.js + Convex project, build content upload UI, implement file parsing and learning objective input"
+  started: "2025-01-29"
+  status: "not-started"  # not-started | in-progress | complete
+  completion_criteria:
+    - "Next.js 14 + Convex + Tailwind + shadcn/ui project scaffolded and running"
+    - "Convex schema defined for games, players, answers tables"
+    - "File upload (PDF, PPTX, DOCX) and text paste working"
+    - "Learning objective input + 6-type objective selector working"
+    - "US-001 and US-002 acceptance criteria met"
+
+# Phase History
+completed_phases: []
+
+# All Available Phases
+phases:
+  1:
+    name: "Project Setup & Upload"
+    description: "Initialize project, define schema, build upload and objective input UI"
+    key_deliverables:
+      - "Working Next.js + Convex dev environment"
+      - "Convex schema for games, players, answers"
+      - "Homepage with file upload zone, text input, objective input, type selector"
+
+  2:
+    name: "AI Question Generation"
+    description: "Integrate Gemini API, engineer prompts, generate structured questions from content"
+    key_deliverables:
+      - "Gemini API integration via Convex action"
+      - "Prompt that produces pedagogically-grounded questions"
+      - "Structured JSON output: multiple_choice, ordering, categorization"
+      - "Game creation with 6-char code and stored questions"
+
+  3:
+    name: "Real-time Game Engine"
+    description: "Build game state machine, lobby, real-time sync, host controls, student join flow"
+    key_deliverables:
+      - "Game state machine: lobby → playing → question → results → complete"
+      - "Host view with game code, player list, controls"
+      - "Student join + play flow with real-time sync"
+      - "Answer submission with time tracking"
+
+  4:
+    name: "Game UI & Leaderboard"
+    description: "Build question type UIs, feedback, leaderboard, results analytics"
+    key_deliverables:
+      - "Multiple choice, ordering, categorization question UIs"
+      - "Timer, feedback overlays, leaderboard"
+      - "Per-question analytics and comprehension gap display"
+
+  5:
+    name: "Polish & Demo Prep"
+    description: "End-to-end testing, performance, edge cases, demo readiness"
+    key_deliverables:
+      - "Full flow working under 60 seconds"
+      - "5+ simultaneous players tested"
+      - "Mobile-responsive student view"
+      - "Demo-ready with sample content"
