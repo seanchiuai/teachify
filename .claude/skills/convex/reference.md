@@ -68,6 +68,10 @@ export default defineSchema({
 });
 ```
 
+**Notes:**
+- `_creationTime` is automatically added by Convex to all documents — no need for `createdAt` or `joinedAt` fields
+- `v.id("_storage")` references Convex's built-in file storage table
+
 ## Query Pattern
 
 ```typescript
@@ -110,13 +114,50 @@ export const updateState = mutation({
 });
 ```
 
+## Internal Functions (for action → mutation calls)
+
+Use `internalMutation` and `internalQuery` for functions that should only be called from other server functions (not directly from clients):
+
+```typescript
+// convex/games.ts
+import { internalMutation } from "./_generated/server";
+import { v } from "convex/values";
+
+export const create = internalMutation({
+  args: {
+    code: v.string(),
+    content: v.string(),
+    objective: v.string(),
+    objectiveType: v.string(),
+    questions: v.array(v.any()),
+    topic: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("games", {
+      ...args,
+      state: "lobby",
+      currentQuestion: 0,
+    });
+  },
+});
+```
+
+Then call from an action:
+```typescript
+import { internal } from "./_generated/api";
+// Inside action handler:
+const gameId = await ctx.runMutation(internal.games.create, { ... });
+```
+
+**Important:** Use `internal` (not `api`) when calling functions from actions. The `api` object exposes public functions callable from clients. The `internal` object exposes internal functions only callable server-side.
+
 ## Action Pattern (External API)
 
 ```typescript
 // convex/generate.ts
 import { action } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
 
 export const generateGame = action({
   args: {
@@ -125,23 +166,20 @@ export const generateGame = action({
     objectiveType: v.string(),
   },
   handler: async (ctx, args) => {
-    // Call Gemini API
-    const response = await fetch("https://generativelanguage.googleapis.com/...", {
-      method: "POST",
-      body: JSON.stringify({ /* prompt */ }),
-    });
-    const questions = await response.json();
+    // Actions CAN call external APIs
+    // Actions CANNOT directly use ctx.db
+    // Use ctx.runMutation / ctx.runQuery to access the database
 
-    // Generate 6-char code
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const questions = await callGeminiAPI(args);
+    const code = generateGameCode();
 
-    // Store game via mutation
-    const gameId = await ctx.runMutation(api.games.create, {
+    const gameId = await ctx.runMutation(internal.games.create, {
       code,
       content: args.content,
       objective: args.objective,
       objectiveType: args.objectiveType,
       questions,
+      topic: args.content.substring(0, 100),
     });
 
     return { gameId, code };
@@ -152,59 +190,103 @@ export const generateGame = action({
 ## React Integration
 
 ```typescript
-// Using queries (auto real-time)
+// Using queries and mutations from React
 import { useQuery, useMutation, useAction } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { api } from "../convex/_generated/api";
 
-// Real-time query — re-renders when data changes
+// Real-time query — re-renders automatically when data changes
 const game = useQuery(api.games.getByCode, { code });
 const players = useQuery(api.players.listByGame, { gameId: game?._id });
 
-// Mutation
+// Mutation — write data
 const joinGame = useMutation(api.players.join);
 await joinGame({ gameId, name: "Alex" });
 
-// Action (for AI generation)
+// Action — call external APIs (for AI generation)
 const generate = useAction(api.generate.generateGame);
 const { code } = await generate({ content, objective, objectiveType });
 ```
 
+**Hooks:**
+- `useQuery(functionRef, args)` — subscribes to real-time data. Returns `undefined` while loading.
+- `useMutation(functionRef)` — returns async function to call mutation
+- `useAction(functionRef)` — returns async function to call action
+- All imported from `"convex/react"`
+
 ## File Upload Pattern
 
 ```typescript
-// 1. Get upload URL (mutation)
-export const generateUploadUrl = mutation(async (ctx) => {
-  return await ctx.storage.generateUploadUrl();
+// convex/files.ts — Upload URL generation
+import { mutation } from "./_generated/server";
+
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
 });
 
-// 2. Upload from client
-const uploadUrl = await generateUploadUrl();
-const result = await fetch(uploadUrl, {
+// Client-side upload flow:
+// 1. Call generateUploadUrl mutation to get presigned URL
+// 2. POST file to that URL with Content-Type header
+// 3. Parse response JSON to get { storageId }
+// 4. Pass storageId to another mutation/action for processing
+```
+
+```typescript
+// Client-side upload
+const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+
+const url = await generateUploadUrl();
+const result = await fetch(url, {
   method: "POST",
   headers: { "Content-Type": file.type },
   body: file,
 });
 const { storageId } = await result.json();
-
-// 3. Get file URL for reading
-export const getFileUrl = query({
-  args: { storageId: v.id("_storage") },
-  handler: async (ctx, args) => {
-    return await ctx.storage.getUrl(args.storageId);
-  },
-});
 ```
 
-## ConvexProvider Setup
+```typescript
+// Get file URL for reading (in a query or mutation)
+const url = await ctx.storage.getUrl(storageId);
+
+// Get file blob for processing (in an action)
+const blob = await ctx.storage.get(storageId);
+```
+
+## ConvexProvider Setup (Next.js App Router)
 
 ```typescript
-// app/providers.tsx
+// app/ConvexClientProvider.tsx
 "use client";
+
 import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ReactNode } from "react";
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function ConvexClientProvider({ children }: { children: ReactNode }) {
   return <ConvexProvider client={convex}>{children}</ConvexProvider>;
 }
 ```
+
+```typescript
+// app/layout.tsx
+import { ConvexClientProvider } from "./ConvexClientProvider";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <ConvexClientProvider>{children}</ConvexClientProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+**Key points (from Convex docs):**
+- Provider must be a `"use client"` component
+- Use `ConvexProvider` from `"convex/react"` (not `ConvexReactProvider`)
+- Client is `ConvexReactClient` from `"convex/react"`
+- Env var must be `NEXT_PUBLIC_CONVEX_URL` (public prefix required for client-side)

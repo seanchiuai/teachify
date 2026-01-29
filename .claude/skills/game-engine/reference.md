@@ -6,6 +6,8 @@ Code patterns for LessonPlay game state management.
 
 ```typescript
 // convex/games.ts
+import { mutation } from "./_generated/server";
+import { v } from "convex/values";
 
 // Host starts the game
 export const startGame = mutation({
@@ -21,7 +23,7 @@ export const startGame = mutation({
   },
 });
 
-// Host advances to next question or shows results
+// Host advances to next question or completes game
 export const nextQuestion = mutation({
   args: { gameId: v.id("games") },
   handler: async (ctx, args) => {
@@ -56,6 +58,9 @@ export const showResults = mutation({
 
 ```typescript
 // convex/answers.ts
+import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
+
 export const submitAnswer = mutation({
   args: {
     gameId: v.id("games"),
@@ -81,7 +86,7 @@ export const submitAnswer = mutation({
     const question = game.questions[args.questionIndex];
     const correct = checkAnswer(question, args.answer);
 
-    // Calculate score
+    // Calculate score: 1000 base + up to 500 speed bonus
     const TIMER_DURATION = 30000; // 30 seconds
     const points = correct ? 1000 + Math.max(0, Math.round(500 * (1 - args.timeMs / TIMER_DURATION))) : 0;
 
@@ -128,6 +133,9 @@ function checkAnswer(
 
 ```typescript
 // convex/players.ts
+import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
+
 export const join = mutation({
   args: {
     gameId: v.id("games"),

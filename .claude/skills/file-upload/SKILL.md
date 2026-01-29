@@ -10,8 +10,8 @@ Handles uploading lesson materials and extracting text content for AI processing
 ## Overview
 
 - **Upload**: Drag-and-drop or click to select files
-- **Storage**: Files stored in Convex file storage
-- **Parsing**: Extract text from PDF, PPTX, DOCX server-side
+- **Storage**: Files stored in Convex file storage via presigned URL pattern
+- **Parsing**: Extract text from PDF, PPTX, DOCX in a Convex action
 - **Fallback**: Text paste/type for when file upload isn't needed
 
 ## When to Use This Skill
@@ -27,18 +27,24 @@ Handles uploading lesson materials and extracting text content for AI processing
 
 | Format | Extension | Parsing Library |
 |--------|-----------|----------------|
-| PDF | .pdf | pdf-parse |
-| PowerPoint | .pptx | pptx-parser or mammoth |
-| Word | .docx | mammoth |
+| PDF | .pdf | `pdf-parse` |
+| PowerPoint | .pptx | `jszip` (extract XML text) |
+| Word | .docx | `mammoth` |
 | Plain text | .txt | N/A (direct read) |
 
-### Upload Flow
+### Upload Flow (Convex 3-Step Pattern)
 
-1. User drops file on upload zone → client validates file type
-2. Client calls `generateUploadUrl` mutation → gets presigned URL
-3. Client uploads file to presigned URL → gets `storageId`
-4. Client sends `storageId` to a Convex action for parsing
-5. Action fetches file content, parses text, returns extracted text
+1. Client calls `generateUploadUrl` mutation → gets short-lived presigned URL
+2. Client POSTs file to that URL with `Content-Type` header → gets `{ storageId }` in response
+3. Client passes `storageId` to a Convex action for parsing, or stores it in a document
+
+**From Convex docs:** `ctx.storage.generateUploadUrl()` returns a `Promise<string>`. The POST response JSON contains `{ storageId: Id<"_storage"> }`.
+
+### File Reading in Actions
+
+- `ctx.storage.get(storageId)` returns `Blob | null` in actions
+- `ctx.storage.getUrl(storageId)` returns `string | null` in queries/mutations (public URL)
+- Use dynamic `import()` (not `require()`) for parsing libraries in Convex actions
 
 ### File Size Limits
 

@@ -8,7 +8,7 @@ Code examples for file upload and parsing in LessonPlay.
 "use client";
 import { useCallback, useState } from "react";
 import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { api } from "../convex/_generated/api";
 
 const ACCEPTED_TYPES = {
   "application/pdf": ".pdf",
@@ -40,12 +40,15 @@ export function FileUploadZone({
 
     setUploading(true);
     try {
+      // Step 1: Get presigned upload URL from Convex
       const url = await generateUploadUrl();
+      // Step 2: POST file directly to that URL
       const result = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": file.type },
         body: file,
       });
+      // Step 3: Extract storageId from response
       const { storageId } = await result.json();
       onFileUploaded(storageId, file.name);
     } catch {
@@ -99,52 +102,62 @@ export function FileUploadZone({
 
 ```typescript
 // convex/files.ts
-import { mutation, action } from "./_generated/server";
-import { v } from "convex/values";
+import { mutation } from "./_generated/server";
 
-export const generateUploadUrl = mutation(async (ctx) => {
-  return await ctx.storage.generateUploadUrl();
+// Explicit args form (required by Convex for public mutations)
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
 });
 ```
 
+**From Convex docs:** `ctx.storage.generateUploadUrl()` returns a `Promise<string>` — a short-lived URL that accepts POST requests. The POST response is JSON containing `{ storageId: Id<"_storage"> }`.
+
 ## File Parsing Action
+
+Convex actions can read file blobs from storage with `ctx.storage.get(storageId)`. This returns a `Blob | null`.
 
 ```typescript
 // convex/files.ts
+import { action } from "./_generated/server";
+import { v } from "convex/values";
+
 export const parseFile = action({
   args: { storageId: v.id("_storage") },
   handler: async (ctx, args) => {
+    // ctx.storage.get() returns Blob | null in actions
     const blob = await ctx.storage.get(args.storageId);
     if (!blob) throw new Error("File not found");
 
-    const buffer = await blob.arrayBuffer();
-    const uint8 = new Uint8Array(buffer);
-
-    // Detect type by checking file content
+    const buffer = Buffer.from(await blob.arrayBuffer());
     const type = blob.type;
 
     if (type === "application/pdf") {
-      const pdfParse = require("pdf-parse");
-      const data = await pdfParse(Buffer.from(uint8));
+      // pdf-parse: npm install pdf-parse
+      const pdfParse = (await import("pdf-parse")).default;
+      const data = await pdfParse(buffer);
       return data.text;
     }
 
     if (type.includes("wordprocessingml")) {
-      const mammoth = require("mammoth");
-      const result = await mammoth.extractRawText({ buffer: Buffer.from(uint8) });
+      // mammoth: npm install mammoth
+      const mammoth = await import("mammoth");
+      const result = await mammoth.extractRawText({ buffer });
       return result.value;
     }
 
     if (type.includes("presentationml")) {
-      // PPTX parsing — extract text from slides
-      const JSZip = require("jszip");
-      const zip = await JSZip.loadAsync(uint8);
+      // jszip: npm install jszip
+      const JSZip = (await import("jszip")).default;
+      const zip = await JSZip.loadAsync(buffer);
       const texts: string[] = [];
 
       for (const [path, file] of Object.entries(zip.files)) {
         if (path.startsWith("ppt/slides/slide") && path.endsWith(".xml")) {
           const content = await (file as any).async("text");
-          // Extract text between <a:t> tags
+          // Extract text between <a:t> tags (OOXML text runs)
           const matches = content.match(/<a:t>([^<]*)<\/a:t>/g);
           if (matches) {
             texts.push(matches.map((m: string) => m.replace(/<\/?a:t>/g, "")).join(" "));
@@ -158,6 +171,8 @@ export const parseFile = action({
   },
 });
 ```
+
+**Note:** Convex actions run in a Node.js environment. Use dynamic `import()` instead of `require()` for ESM compatibility. Install parsing deps: `npm install pdf-parse mammoth jszip`.
 
 ## Text Input Fallback
 

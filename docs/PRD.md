@@ -163,6 +163,7 @@ LessonPlay is a web app that enables teachers to instantly transform lesson mate
 ### Data Schema
 ```typescript
 // games table
+// Convex auto-adds _id: Id<"games"> and _creationTime: number
 interface Game {
   code: string;              // 6-char unique code
   topic: string;             // extracted/pasted content summary
@@ -172,7 +173,7 @@ interface Game {
   questions: Question[];     // generated questions (JSON)
   state: "lobby" | "playing" | "question" | "results" | "complete";
   currentQuestion: number;   // index of active question
-  createdAt: number;
+  fileId?: Id<"_storage">;   // optional uploaded file reference
 }
 
 interface Question {
@@ -185,14 +186,15 @@ interface Question {
 }
 
 // players table
+// Convex auto-adds _id: Id<"players"> and _creationTime: number
 interface Player {
   gameId: Id<"games">;
   name: string;
   score: number;
-  joinedAt: number;
 }
 
 // answers table
+// Convex auto-adds _id: Id<"answers"> and _creationTime: number
 interface Answer {
   gameId: Id<"games">;
   playerId: Id<"players">;
@@ -200,7 +202,6 @@ interface Answer {
   answer: string | string[];   // player's response
   correct: boolean;
   timeMs: number;              // response time
-  createdAt: number;
 }
 ```
 

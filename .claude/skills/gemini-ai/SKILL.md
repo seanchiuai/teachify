@@ -9,10 +9,11 @@ Handles AI-powered question generation — the core differentiator of LessonPlay
 
 ## Overview
 
+- **SDK**: `@google/genai` npm package (`GoogleGenAI` class)
 - **Input**: Lesson text content + learning objective + objective type
 - **Output**: 8-10 structured questions (multiple_choice, ordering, categorization)
 - **Key**: Questions test understanding, not recall. Distractors based on misconceptions.
-- **Format**: Structured JSON output for reliable parsing
+- **Format**: Structured JSON output via `responseMimeType` + `responseSchema`
 
 ## When to Use This Skill
 
@@ -23,6 +24,19 @@ Handles AI-powered question generation — the core differentiator of LessonPlay
 - Mapping objective types to question formats
 
 ## Key Concepts
+
+### SDK Usage
+
+```typescript
+import { GoogleGenAI } from "@google/genai";
+const ai = new GoogleGenAI({ apiKey });
+const response = await ai.models.generateContent({ model, contents, config });
+const text = response.text; // property, NOT a method
+```
+
+### Structured Output
+
+Use `config.responseMimeType: "application/json"` and `config.responseSchema` to enforce JSON structure. The SDK handles schema validation — no need to manually parse or hope for correct formatting.
 
 ### Objective Type → Question Format Mapping
 
@@ -35,13 +49,9 @@ Handles AI-powered question generation — the core differentiator of LessonPlay
 | Perform | Ordering (sequence steps) |
 | Analyze | Multiple choice + categorization |
 
-### Prompt Engineering Principles
+### Calling from Convex
 
-1. **Learning objective context** — AI knows what students should learn, not just the content
-2. **Objective type guidance** — Shapes question format and depth
-3. **Misconception awareness** — Distractors reflect common student errors
-4. **Explanation generation** — Every question includes why the answer is correct
-5. **Structured output** — JSON schema enforced for reliable parsing
+Gemini calls MUST happen in a Convex **action** (not query or mutation). Use `ctx.runMutation(internal.xxx.yyy, args)` to store results in the database.
 
 ### Question Quality Markers
 
