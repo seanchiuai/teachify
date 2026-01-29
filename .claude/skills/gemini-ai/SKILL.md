@@ -5,23 +5,26 @@ description: Gemini API integration for generating pedagogically-grounded game q
 
 # Gemini AI
 
-Handles AI-powered question generation — the core differentiator of LessonPlay. Gemini processes lesson content + learning objectives to produce structured, pedagogically-sound game questions.
+Handles the two-step AI generation pipeline — the core differentiator of LessonPlay. Gemini processes lesson content + learning objectives to produce (1) structured questions and (2) a self-contained HTML game that runs in a sandboxed iframe.
 
 ## Overview
 
 - **SDK**: `@google/genai` npm package (`GoogleGenAI` class)
 - **Input**: Lesson text content + learning objective + objective type
-- **Output**: 8-10 structured questions (multiple_choice, ordering, categorization)
-- **Key**: Questions test understanding, not recall. Distractors based on misconceptions.
-- **Format**: Structured JSON output via `responseMimeType` + `responseSchema`
+- **Step 1 Output**: 8-10 structured questions as JSON (for scoring/analytics)
+- **Step 2 Output**: Self-contained HTML game (inline CSS/JS, no external deps) that renders the questions
+- **Key**: Questions test understanding, not recall. Games are unique every time.
+- **Format**: Step 1 uses structured JSON output; Step 2 uses plain text (HTML string)
 
 ## When to Use This Skill
 
-- Building or modifying the question generation pipeline
-- Engineering or iterating on the AI prompt
+- Building or modifying the two-step generation pipeline
+- Engineering or iterating on the question generation prompt
+- Engineering or iterating on the HTML game generation prompt
 - Parsing and validating Gemini's structured output
+- Validating generated HTML (postMessage protocol, no external URLs)
 - Handling generation errors or retries
-- Mapping objective types to question formats
+- Mapping objective types to question/game formats
 
 ## Key Concepts
 
@@ -60,11 +63,30 @@ Gemini calls MUST happen in a Convex **action** (not query or mutation). Use `ct
 - Explanation teaches, not just confirms
 - Question maps to the stated learning objective
 
+### HTML Game Generation Requirements
+
+The generated HTML must:
+- Be a complete `<!DOCTYPE html>` document with inline `<style>` and `<script>`
+- Include `<meta name="viewport" content="width=device-width, initial-scale=1.0">`
+- Use no external dependencies (no CDN scripts, no external CSS, no images via URL)
+- Implement the postMessage communication protocol (GAME_READY, ANSWER_SUBMITTED, GAME_OVER)
+- Use CSS relative units (%, vh, vw, rem) and pointer events (not click-only)
+- Have touch targets >= 44px
+- Not use localStorage, sessionStorage, fetch, or XMLHttpRequest (sandbox blocks these)
+
+### HTML Validation
+
+Before storing, validate:
+- Contains `postMessage` or `port.postMessage` code
+- No external `src=` or `href=` pointing to other domains
+- Contains the question data
+- Is structurally valid HTML
+
 ## Related Files
 
-- `convex/generate.ts` — Gemini API action
-- `docs/PRD.md` — AI prompt strategy section
+- `convex/generate.ts` — Gemini API action (two-step: questions + HTML game)
+- `docs/PRD.md` — Architecture and AI generation sections
 
 ## Reference Files
 
-- [reference.md](reference.md) — Prompt templates and API examples
+- [reference.md](reference.md) — Prompt templates, API examples, HTML generation

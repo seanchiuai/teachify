@@ -1,6 +1,6 @@
 # Gemini AI Reference
 
-Prompt templates and API patterns for LessonPlay question generation.
+Two-step generation pipeline: (1) structured questions, (2) self-contained HTML game.
 
 ## SDK Setup
 
@@ -87,9 +87,9 @@ RULES:
 }
 ```
 
-## Using Gemini in a Convex Action
+## Using Gemini in a Convex Action (Two-Step Pipeline)
 
-Actions are required for external API calls. Use `internal` mutations to write results back to the database:
+Actions are required for external API calls. The generation is two steps: (1) generate questions as JSON, (2) generate an HTML game from those questions.
 
 ```typescript
 // convex/generate.ts
@@ -109,25 +109,41 @@ export const generateGame = action({
     if (!apiKey) throw new Error("GEMINI_API_KEY not set");
 
     const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
+
+    // Step 1: Generate structured questions
+    const questionsResponse = await ai.models.generateContent({
       model: "gemini-2.0-flash",
-      contents: buildPrompt(args.content, args.objective, args.objectiveType),
+      contents: buildQuestionPrompt(args.content, args.objective, args.objectiveType),
       config: {
         responseMimeType: "application/json",
-        systemInstruction: "You are a pedagogical expert...",
+        responseSchema: questionSchema,
+        systemInstruction: "You are a pedagogical expert generating classroom game questions. Generate questions that test understanding, not recall. Wrong answers must reflect common student misconceptions.",
       },
     });
+    const questions = JSON.parse(questionsResponse.text);
 
-    const questions = JSON.parse(response.text);
+    // Step 2: Generate self-contained HTML game
+    const htmlResponse = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: buildGameHtmlPrompt(questions, args.objectiveType),
+      config: {
+        systemInstruction: "You are a game developer. Generate a single self-contained HTML document for an interactive educational game. Output ONLY the HTML — no markdown, no code fences, no explanation.",
+      },
+    });
+    const gameHtml = htmlResponse.text;
+
+    // Validate the HTML
+    validateGameHtml(gameHtml);
+
     const code = generateGameCode();
 
-    // Use internal mutation to write to DB from an action
     const gameId = await ctx.runMutation(internal.games.create, {
       code,
       content: args.content,
       objective: args.objective,
       objectiveType: args.objectiveType,
       questions,
+      gameHtml,
     });
 
     return { gameId, code };
@@ -141,6 +157,78 @@ export const generateGame = action({
 - Use `ctx.runMutation(internal.xxx.yyy, args)` to write data
 - Use `ctx.runQuery(internal.xxx.yyy, args)` to read data
 - Always use `internal` (not `api`) for calling functions from actions for security
+
+## Step 2: HTML Game Generation Prompt
+
+```typescript
+function buildGameHtmlPrompt(questions: Question[], objectiveType: string): string {
+  return `Generate a COMPLETE, SELF-CONTAINED HTML file for an interactive educational game.
+
+QUESTIONS DATA:
+${JSON.stringify(questions, null, 2)}
+
+OBJECTIVE TYPE: ${objectiveType}
+
+REQUIREMENTS:
+- Complete HTML5 document with <!DOCTYPE html>
+- Include <meta name="viewport" content="width=device-width, initial-scale=1.0">
+- All CSS inline in <style> tags
+- All JavaScript inline in <script> tags
+- Mobile-responsive (relative units: %, vh, vw, rem — never fixed pixel widths)
+- Buttons/touch targets must be at least 44x44px
+- Use pointer events (pointerdown) instead of click-only for touch support
+- Text must be readable without zooming (minimum 16px base font)
+- Use vibrant colors and smooth CSS animations for engagement
+- Game elements must fit within the viewport without scrolling
+
+COMMUNICATION PROTOCOL (MANDATORY):
+On load, listen for parent message to receive MessageChannel port:
+  window.addEventListener('message', (e) => {
+    if (e.data?.type === 'INIT_PORT') {
+      const port = e.ports[0];
+      port.postMessage({ type: 'GAME_READY' });
+      // Use port for all further communication
+    }
+  }, { once: true });
+
+Send these messages via the port:
+- { type: 'GAME_READY' } — when game is loaded
+- { type: 'ANSWER_SUBMITTED', payload: { questionIndex: number, answer: string, timeMs: number } } — when player answers
+- { type: 'GAME_OVER', payload: { finalScore: number } } — when all questions done
+
+Listen for these messages from parent via the port:
+- { type: 'START_GAME' } — begin the game
+- { type: 'NEXT_QUESTION', payload: { questionIndex: number } } — advance
+- { type: 'TIME_UP' } — timer expired for current question
+- { type: 'END_GAME' } — force end
+
+CONSTRAINTS:
+- NO external scripts, stylesheets, or images (no CDN, no URLs)
+- NO localStorage or sessionStorage (sandbox blocks it)
+- NO fetch/XMLHttpRequest (sandbox blocks network)
+- Use CSS animations and gradients instead of images
+- Code must be COMPLETE and FUNCTIONAL — no placeholders, no omissions
+- Output ONLY the HTML document — no markdown fences, no explanation text`;
+}
+```
+
+## HTML Validation
+
+```typescript
+function validateGameHtml(html: string): void {
+  if (!html.includes('postMessage') && !html.includes('port.postMessage')) {
+    throw new Error("Generated HTML missing postMessage communication");
+  }
+  // Check for external resource loading
+  const externalUrlPattern = /(?:src|href)\s*=\s*["']https?:\/\//i;
+  if (externalUrlPattern.test(html)) {
+    throw new Error("Generated HTML contains external URLs");
+  }
+  if (!html.includes('<!DOCTYPE') && !html.includes('<html')) {
+    throw new Error("Generated HTML is not a valid HTML document");
+  }
+}
+```
 
 ## Response Parsing
 

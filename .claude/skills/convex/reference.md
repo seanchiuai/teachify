@@ -35,6 +35,7 @@ export default defineSchema({
       explanation: v.string(),
       misconception: v.string(),
     })),
+    gameHtml: v.string(),  // AI-generated self-contained HTML game (rendered in sandboxed iframe)
     state: v.union(
       v.literal("lobby"),
       v.literal("playing"),
@@ -130,6 +131,7 @@ export const create = internalMutation({
     objective: v.string(),
     objectiveType: v.string(),
     questions: v.array(v.any()),
+    gameHtml: v.string(),
     topic: v.string(),
   },
   handler: async (ctx, args) => {
@@ -170,7 +172,10 @@ export const generateGame = action({
     // Actions CANNOT directly use ctx.db
     // Use ctx.runMutation / ctx.runQuery to access the database
 
-    const questions = await callGeminiAPI(args);
+    // Step 1: Generate questions (structured JSON)
+    const questions = await generateQuestions(args);
+    // Step 2: Generate HTML game from questions
+    const gameHtml = await generateGameHtml(questions, args);
     const code = generateGameCode();
 
     const gameId = await ctx.runMutation(internal.games.create, {
@@ -179,6 +184,7 @@ export const generateGame = action({
       objective: args.objective,
       objectiveType: args.objectiveType,
       questions,
+      gameHtml,
       topic: args.content.substring(0, 100),
     });
 

@@ -1,6 +1,6 @@
 # Game Engine Reference
 
-Code patterns for LessonPlay game state management.
+Code patterns for LessonPlay game state management and iframe communication.
 
 ## State Transition Mutations
 
@@ -211,7 +211,7 @@ export const questionStats = query({
 });
 ```
 
-## Client-Side Timer
+## Client-Side Timer (Parent — Authoritative)
 
 ```typescript
 // hooks/useTimer.ts
@@ -236,5 +236,144 @@ export function useTimer(durationMs: number, active: boolean) {
 
   const elapsedMs = durationMs - remaining;
   return { remaining, elapsedMs };
+}
+```
+
+Timer runs in the parent app (authoritative). When it expires, parent sends `TIME_UP` to iframe. The iframe can show a visual timer but does not enforce the limit.
+
+## GameIframe Component (Sandboxed)
+
+```tsx
+// components/GameIframe.tsx
+"use client";
+
+import { useEffect, useRef, useCallback } from "react";
+
+interface GameMessage {
+  type: "GAME_READY" | "ANSWER_SUBMITTED" | "GAME_OVER" | "ERROR";
+  payload?: any;
+}
+
+interface ParentMessage {
+  type: "START_GAME" | "NEXT_QUESTION" | "TIME_UP" | "END_GAME";
+  payload?: any;
+}
+
+export function GameIframe({
+  gameHtml,
+  gameId,
+  onReady,
+  onAnswerSubmitted,
+  onGameOver,
+  onError,
+}: {
+  gameHtml: string;
+  gameId: string;
+  onReady: () => void;
+  onAnswerSubmitted: (payload: { questionIndex: number; answer: string; timeMs: number }) => void;
+  onGameOver: (payload: { finalScore: number }) => void;
+  onError: (message: string) => void;
+}) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const portRef = useRef<MessagePort | null>(null);
+
+  // Set up MessageChannel when iframe loads
+  const handleIframeLoad = useCallback(() => {
+    const iframe = iframeRef.current;
+    if (!iframe?.contentWindow) return;
+
+    const channel = new MessageChannel();
+    portRef.current = channel.port1;
+
+    // Listen for messages from iframe via private channel
+    channel.port1.onmessage = (event: MessageEvent<GameMessage>) => {
+      const { type, payload } = event.data;
+      switch (type) {
+        case "GAME_READY":
+          onReady();
+          break;
+        case "ANSWER_SUBMITTED":
+          onAnswerSubmitted(payload);
+          break;
+        case "GAME_OVER":
+          onGameOver(payload);
+          break;
+        case "ERROR":
+          onError(payload?.message || "Unknown game error");
+          break;
+      }
+    };
+
+    // Transfer port2 to iframe (one-time wildcard postMessage for handshake)
+    iframe.contentWindow.postMessage(
+      { type: "INIT_PORT" },
+      "*",
+      [channel.port2]
+    );
+  }, [onReady, onAnswerSubmitted, onGameOver, onError]);
+
+  // Send message to iframe via private channel
+  const sendToIframe = useCallback((message: ParentMessage) => {
+    portRef.current?.postMessage(message);
+  }, []);
+
+  // Expose sendToIframe via ref or context for parent to use
+  useEffect(() => {
+    // Store sendToIframe on a ref or context so parent components can call it
+    (window as any).__gameIframeSend = sendToIframe;
+    return () => { delete (window as any).__gameIframeSend; };
+  }, [sendToIframe]);
+
+  return (
+    <div className="relative w-full aspect-[16/9] max-w-[800px] mx-auto">
+      <iframe
+        ref={iframeRef}
+        key={gameId} // Force re-render on game change (Firefox caching fix)
+        sandbox="allow-scripts"
+        srcDoc={gameHtml}
+        onLoad={handleIframeLoad}
+        className="absolute inset-0 w-full h-full border-0 rounded-xl"
+        title="Game"
+      />
+    </div>
+  );
+}
+```
+
+### Security Notes
+
+- `sandbox="allow-scripts"` — lets JS run but blocks same-origin access, forms, popups, navigation
+- **Never** add `allow-same-origin` — combining both lets iframe escape sandbox entirely
+- MessageChannel provides a private communication channel after initial handshake
+- `key={gameId}` forces iframe re-render (avoids Firefox caching bugs)
+- `srcdoc` iframes inherit parent CSP — ensure parent page allows inline scripts
+
+## useGameIframe Hook
+
+```typescript
+// hooks/useGameIframe.ts
+import { useRef, useCallback } from "react";
+
+type ParentMessage =
+  | { type: "START_GAME" }
+  | { type: "NEXT_QUESTION"; payload: { questionIndex: number } }
+  | { type: "TIME_UP" }
+  | { type: "END_GAME" };
+
+export function useGameIframe() {
+  const portRef = useRef<MessagePort | null>(null);
+
+  const setupChannel = useCallback((iframe: HTMLIFrameElement, onMessage: (msg: any) => void) => {
+    const channel = new MessageChannel();
+    portRef.current = channel.port1;
+    channel.port1.onmessage = (e) => onMessage(e.data);
+    iframe.contentWindow?.postMessage({ type: "INIT_PORT" }, "*", [channel.port2]);
+  }, []);
+
+  const send = useCallback((msg: ParentMessage) => {
+    portRef.current?.postMessage(msg);
+  }, []);
+
+  return { setupChannel, send };
 }
 ```

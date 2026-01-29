@@ -2,11 +2,11 @@
 
 ## Introduction
 
-LessonPlay is a web app that enables teachers to instantly transform lesson materials into interactive classroom games. Teachers upload content (PDFs, slides, documents, or plain text) along with learning objectives, and AI generates pedagogically-grounded activities that match game mechanics to learning objective types.
+LessonPlay is a web app that enables teachers to instantly transform lesson materials into interactive classroom games. Teachers upload content (PDFs, slides, documents, or plain text) along with learning objectives, and AI generates a unique, playable HTML game — complete with questions, UI, and game mechanics — rendered in a sandboxed iframe.
 
 **Target Users:** K-12 and university teachers who want to create engaging, learning-focused classroom activities quickly.
 
-**Core Value:** Reduce teacher game-creation time from 30+ minutes to under 2 minutes while generating questions that test understanding — not just recall.
+**Core Value:** Reduce teacher game-creation time from 30+ minutes to under 2 minutes while generating unique games every time that test understanding — not just recall.
 
 ---
 
@@ -42,16 +42,18 @@ LessonPlay is a web app that enables teachers to instantly transform lesson mate
 - [ ] Verify in browser
 
 ### US-003: Generate Game via AI
-**Description:** As a teacher, I want the system to generate 8-10 pedagogically-grounded questions from my content so that I get a ready-to-play game in seconds.
+**Description:** As a teacher, I want the system to generate a unique, playable HTML game from my content so that I get a ready-to-play interactive experience in seconds.
 
 **Acceptance Criteria:**
 - [ ] Gemini API processes uploaded content + objective + objective type
-- [ ] Returns 8-10 questions as structured JSON
-- [ ] Questions include: type, question text, options, correct answer(s), explanation, misconception
-- [ ] Mix of question types (multiple_choice, ordering, categorization) based on objective type
+- [ ] Step 1: Generates 8-10 questions as structured JSON (questions include: type, question text, options, correct answer(s), explanation, misconception)
+- [ ] Step 2: Generates a self-contained HTML game (inline CSS + JS, no external dependencies) using the questions
+- [ ] Generated HTML implements the postMessage communication protocol (GAME_READY, ANSWER_SUBMITTED, GAME_OVER)
+- [ ] Generated HTML is mobile-responsive (viewport meta, relative units, pointer events, 44px+ touch targets)
+- [ ] HTML is validated before storage (contains postMessage code, no external URLs)
 - [ ] Unique 6-character game code generated
-- [ ] Game stored in Convex with questions
-- [ ] Generation completes in under 15 seconds
+- [ ] Game stored in Convex with questions + HTML string
+- [ ] Generation completes in under 30 seconds
 - [ ] Typecheck passes
 - [ ] Verify in browser
 
@@ -68,14 +70,16 @@ LessonPlay is a web app that enables teachers to instantly transform lesson mate
 - [ ] Verify in browser
 
 ### US-005: Join and Play a Game
-**Description:** As a student, I want to join a game by code and answer questions so that I can participate without creating an account.
+**Description:** As a student, I want to join a game by code and play an AI-generated interactive game so that I can participate without creating an account.
 
 **Acceptance Criteria:**
 - [ ] /play page with game code input (6 characters) and display name
 - [ ] No account required to join
 - [ ] Lobby waiting screen shows other players joining
-- [ ] Questions display with answer options and timer
-- [ ] Immediate feedback: correct/wrong with explanation
+- [ ] Game renders in a sandboxed iframe (`sandbox="allow-scripts"`, no `allow-same-origin`)
+- [ ] Parent communicates with iframe via MessageChannel (not raw postMessage)
+- [ ] Answers flow from iframe → parent → Convex for validation and scoring
+- [ ] Timer runs in parent app (authoritative), iframe shows visual timer only
 - [ ] Typecheck passes
 - [ ] Verify in browser
 
@@ -123,20 +127,32 @@ LessonPlay is a web app that enables teachers to instantly transform lesson mate
 
 ### AI Question Generation
 - FR-5: Send content + objective + type to Gemini API
-- FR-6: Generate 8-10 questions with structured JSON output
+- FR-6: Step 1: Generate 8-10 questions with structured JSON output
 - FR-7: Support 3 question types: multiple_choice, ordering, categorization
 - FR-8: Include explanation and misconception fields per question
+- FR-9: Step 2: Generate a self-contained HTML game from questions (inline CSS/JS, no external deps)
+- FR-10: Generated HTML must implement postMessage protocol (GAME_READY, ANSWER_SUBMITTED, GAME_OVER)
+- FR-11: Validate generated HTML before storage (has postMessage, no external URLs)
+
+### Game Rendering (Sandboxed Iframe)
+- FR-12: Render generated HTML in `<iframe srcdoc={html} sandbox="allow-scripts" />`
+- FR-13: Never use `allow-same-origin` with `allow-scripts` (security)
+- FR-14: Establish private MessageChannel between parent and iframe
+- FR-15: Parent app owns game state — iframe is a rendering engine only
+- FR-16: Timer runs in parent (authoritative), iframe shows visual countdown
+- FR-17: Use `key={gameId}` on iframe to avoid Firefox caching bugs
 
 ### Game Engine
-- FR-9: Generate unique 6-character game codes
-- FR-10: Manage game state machine (lobby → playing → question → results → complete)
-- FR-11: Real-time sync via Convex subscriptions
-- FR-12: Track answer submissions with timing data
+- FR-18: Generate unique 6-character game codes
+- FR-19: Manage game state machine (lobby → playing → question → results → complete)
+- FR-20: Real-time sync via Convex subscriptions
+- FR-21: Track answer submissions with timing data
+- FR-22: Parent validates answers from iframe postMessage and writes scores to Convex
 
 ### Results & Analytics
-- FR-13: Calculate scores based on correctness and speed
-- FR-14: Display per-question analytics for teacher
-- FR-15: Show leaderboard between questions and at game end
+- FR-23: Calculate scores based on correctness and speed
+- FR-24: Display per-question analytics for teacher
+- FR-25: Show leaderboard between questions and at game end
 
 ---
 
@@ -147,6 +163,58 @@ LessonPlay is a web app that enables teachers to instantly transform lesson mate
 - **Adaptive Difficulty:** Questions don't adjust mid-game
 - **YouTube URL Input:** Text/file upload only for MVP
 - **LMS Integrations:** No Google Classroom, Canvas, etc.
+
+---
+
+## Architecture: AI-Generated HTML Games
+
+### Overview
+
+Instead of pre-built game templates, LessonPlay generates a unique HTML game every time using Gemini. The generated game is a self-contained HTML file (inline CSS + JS) rendered in a sandboxed iframe. The parent Next.js app owns all game state; the iframe is a dumb renderer.
+
+### Two-Step Generation Pipeline
+
+1. **Generate Questions** — Gemini produces structured JSON (questions, answers, explanations, misconceptions). This is used for server-side scoring and analytics.
+2. **Generate HTML Game** — Gemini takes the questions + game config and produces a complete, playable HTML document. This runs in the student's browser.
+
+### Iframe Sandbox Architecture
+
+```
+Parent (Next.js + Convex)          Iframe (AI-generated HTML)
+┌─────────────────────────┐        ┌─────────────────────────┐
+│ Game state machine       │        │ Renders questions        │
+│ Timer (authoritative)    │◄──────►│ Captures user input      │
+│ Score validation         │  Msg   │ Plays animations         │
+│ Convex real-time sync    │ Channel│ Shows visual timer       │
+│ Leaderboard              │        │ Visual feedback           │
+└─────────────────────────┘        └─────────────────────────┘
+```
+
+### PostMessage Protocol
+
+Communication via MessageChannel (not raw postMessage with wildcard origin):
+
+```
+Parent → Iframe:
+  INIT_PORT        — transfer MessageChannel port
+  START_GAME       — begin with question data
+  NEXT_QUESTION    — advance to next question
+  TIME_UP          — timer expired
+  END_GAME         — game over
+
+Iframe → Parent:
+  GAME_READY       — loaded and waiting
+  ANSWER_SUBMITTED — { questionIndex, answer, timeMs }
+  GAME_OVER        — { finalScore }
+  ERROR            — something broke
+```
+
+### Security
+
+- `sandbox="allow-scripts"` only — never add `allow-same-origin`
+- No external resource loading (no `src=`/`href=` to other domains)
+- No localStorage/sessionStorage (blocked by sandbox)
+- Validate HTML before injection (check for postMessage code, no external URLs)
 
 ---
 
@@ -170,7 +238,8 @@ interface Game {
   objective: string;         // teacher's learning objective
   objectiveType: "understand" | "explain" | "apply" | "distinguish" | "perform" | "analyze";
   content: string;           // full extracted text
-  questions: Question[];     // generated questions (JSON)
+  questions: Question[];     // generated questions (JSON) — used for scoring/analytics
+  gameHtml: string;          // AI-generated self-contained HTML game (rendered in sandboxed iframe)
   state: "lobby" | "playing" | "question" | "results" | "complete";
   currentQuestion: number;   // index of active question
   fileId?: Id<"_storage">;   // optional uploaded file reference

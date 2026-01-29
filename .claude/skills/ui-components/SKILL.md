@@ -5,20 +5,21 @@ description: shadcn/ui patterns, game UI components, responsive layouts for clas
 
 # UI Components
 
-UI patterns for LessonPlay — classroom-optimized, mobile-friendly game interfaces using shadcn/ui + Tailwind.
+UI patterns for LessonPlay — classroom-optimized, mobile-friendly interfaces using shadcn/ui + Tailwind. Game UI is AI-generated inside a sandboxed iframe; parent app handles wrapper UI (timer, score, leaderboard, feedback).
 
 ## Overview
 
 - **Framework**: shadcn/ui components with Tailwind utility classes
 - **Design**: Bold colors, large text for projection, big touch targets for mobile
-- **Palette**: Kahoot-style vibrant answer options (red, blue, orange, green)
+- **Game rendering**: AI-generated HTML runs in sandboxed iframe; parent app wraps with timer, score, leaderboard
 - **Responsive**: Desktop (projection), tablet, mobile (student devices)
 
 ## When to Use This Skill
 
 - Building page layouts (homepage, host view, student view)
-- Creating game UI components (question cards, answer buttons, leaderboard)
-- Implementing feedback overlays and animations
+- Creating parent wrapper UI (timer display, score, leaderboard, feedback overlay)
+- Building the GameIframe component and its container
+- Implementing feedback overlays and animations (shown by parent, not iframe)
 - Making components responsive for classroom use
 - Adding loading, error, and empty states
 
@@ -28,17 +29,18 @@ UI patterns for LessonPlay — classroom-optimized, mobile-friendly game interfa
 
 1. **Projection-first for host**: Large text, high contrast, readable from back of room
 2. **Touch-first for students**: Big tap targets (min 48px), no hover-dependent interactions
-3. **Color-coded answers**: Each option has a distinct bold color (Kahoot-style)
-4. **Minimal chrome**: Focus on content, not navigation — games are single-flow
+3. **Iframe-first for game**: The actual game UI is AI-generated, rendered in a sandboxed iframe
+4. **Parent wrapper**: Timer, score, leaderboard, and feedback are rendered by the parent app outside the iframe
+5. **Minimal chrome**: Focus on content, not navigation — games are single-flow
 
 ### Component Library
 
 Using shadcn/ui for base components. Key components:
-- `Button` — primary actions, answer options
-- `Card` — question containers, player cards
+- `Button` — primary actions, host controls
+- `Card` — player cards, results containers
 - `Input` — game code, name, objective text
 - `Badge` — player names, score tags
-- Custom components for game-specific UI
+- `GameIframe` — sandboxed iframe wrapper for AI-generated game (see game-engine skill)
 
 ### Color System
 

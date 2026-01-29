@@ -1,6 +1,12 @@
-# Phase 4: Game UI & Leaderboard
+# Phase 4: Leaderboard & Analytics
 
 Build US-007, US-008 from `docs/PRD.md`.
+
+All UI in this phase is in the parent app (outside the iframe):
+- Leaderboard between questions and final results
+- Feedback overlay (correct/wrong + explanation)
+- Per-question analytics and comprehension gaps
+- Score calculation (server-side in Convex)
 
 Check git log and files to see what's already done. Build the next incomplete feature. Test with agent-browser. Commit if tests pass.
 

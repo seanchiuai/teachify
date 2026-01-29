@@ -1,59 +1,8 @@
 # UI Components Reference
 
-Code patterns for LessonPlay game UI.
+Code patterns for LessonPlay parent app UI. Question/answer UI is AI-generated inside the iframe — these components are the wrapper around it.
 
-## Answer Option Buttons (Kahoot-style)
-
-```tsx
-const OPTION_COLORS = [
-  "bg-red-500 hover:bg-red-600",
-  "bg-blue-500 hover:bg-blue-600",
-  "bg-orange-500 hover:bg-orange-600",
-  "bg-green-500 hover:bg-green-600",
-];
-
-function MultipleChoiceOptions({
-  options,
-  onSelect,
-  disabled,
-  selected,
-  correctAnswer,
-}: {
-  options: string[];
-  onSelect: (option: string) => void;
-  disabled: boolean;
-  selected: string | null;
-  correctAnswer?: string;
-}) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {options.map((option, i) => {
-        const isSelected = selected === option;
-        const isCorrect = correctAnswer === option;
-        const showResult = correctAnswer !== undefined;
-
-        return (
-          <button
-            key={i}
-            onClick={() => !disabled && onSelect(option)}
-            disabled={disabled}
-            className={`
-              p-4 sm:p-6 rounded-xl text-white font-bold text-lg
-              transition-all min-h-[60px]
-              ${showResult && isCorrect ? "ring-4 ring-white" : ""}
-              ${showResult && isSelected && !isCorrect ? "opacity-50" : ""}
-              ${disabled ? "cursor-not-allowed" : "cursor-pointer active:scale-95"}
-              ${OPTION_COLORS[i]}
-            `}
-          >
-            {option}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-```
+**Note:** Individual question type components (MultipleChoiceOptions, OrderingQuestion, CategorizationQuestion) are NOT needed. The AI generates the entire game UI inside the sandboxed iframe. The components below are for the parent app wrapper only.
 
 ## Game Code Display (Host View)
 
