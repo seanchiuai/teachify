@@ -24,22 +24,22 @@ LessonPlay is a web app that enables teachers to instantly transform lesson mate
 **Description:** As a teacher, I want to upload my lesson materials (PDF, PPTX, DOCX, or paste text) so that the system can generate game questions from my actual content.
 
 **Acceptance Criteria:**
-- [ ] Drag-and-drop file upload zone accepts PDF, PPTX, DOCX
-- [ ] Text area allows pasting or typing content directly
-- [ ] Uploaded files are stored in Convex file storage
-- [ ] File content is extracted/parsed into text for AI processing
-- [ ] Typecheck passes
-- [ ] Verify in browser
+- [x] Drag-and-drop file upload zone accepts PDF, PPTX, DOCX
+- [x] Text area allows pasting or typing content directly
+- [x] Uploaded files are stored in Convex file storage
+- [x] File content is extracted/parsed into text for AI processing
+- [x] Typecheck passes
+- [x] Verify in browser
 
 ### US-002: Define Learning Objectives
 **Description:** As a teacher, I want to specify what students should learn and select an objective type so that generated questions match my pedagogical goals.
 
 **Acceptance Criteria:**
-- [ ] Input field for free-text learning objective ("What should students be able to do?")
-- [ ] Objective type selector with 6 options: Understand, Explain, Apply, Distinguish, Perform, Analyze
+- [x] Input field for free-text learning objective ("What should students be able to do?")
+- [x] Objective type selector with 6 options: Understand, Explain, Apply, Distinguish, Perform, Analyze
 - [ ] Selected objective type influences AI question generation
-- [ ] Typecheck passes
-- [ ] Verify in browser
+- [x] Typecheck passes
+- [x] Verify in browser
 
 ### US-003: Generate Game via AI
 **Description:** As a teacher, I want the system to generate a unique, playable HTML game from my content so that I get a ready-to-play interactive experience in seconds.

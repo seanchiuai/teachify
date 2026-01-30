@@ -2,22 +2,27 @@
 # This file tracks which phase of development is currently active
 
 current_phase:
-  phase: 0
-  name: "Planning & Architecture Validation"
-  description: "Finalize documentation, validate architecture decisions, prepare for implementation"
-  started: "2025-01-29"
-  status: "in-progress"  # not-started | in-progress | complete
-  completion_criteria:
-    - "PRD.md finalized with all acceptance criteria defined"
-    - "design.md complete with all page wireframes"
-    - "Skills reference files verified against current API docs"
-    - "api-contracts.md created with component interfaces"
-    - "edge-cases.md created with Phase 5 checklist"
-    - "All phase prompts expanded with checkpoints and deliverables"
-    - "NO CODE - documentation only"
+  phase: 2
+  name: "AI Game Generation (Two-Step Pipeline)"
+  description: "Integrate Gemini API, generate structured questions, then generate self-contained HTML game"
+  started: "2025-01-30"
+  status: "not-started"
+  user_stories: ["US-003"]
 
 # Phase History
-completed_phases: []
+completed_phases:
+  - phase: 0
+    name: "Planning & Architecture Validation"
+    completed: "2025-01-29"
+  - phase: 1
+    name: "Project Setup & Upload"
+    completed: "2025-01-30"
+    deliverables:
+      - "Next.js 14 + Convex + Tailwind project initialized"
+      - "Convex schema for games, players, answers defined"
+      - "File upload with PDF/PPTX/DOCX parsing working"
+      - "Homepage with FileUploadZone, TextContentInput, ObjectiveTypeSelector"
+      - "All US-001 and US-002 acceptance criteria met"
 
 # Phase Dependencies
 # Each phase requires all previous phases to be complete
