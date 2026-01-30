@@ -44,25 +44,22 @@ export function FileUploadZone({
 
       setUploading(true);
       try {
-        // Step 1: Get presigned upload URL
         const url = await generateUploadUrl();
-        // Step 2: POST file to URL
         const result = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": file.type },
           body: file,
         });
-        // Step 3: Extract storageId
         const { storageId } = await result.json();
         setFileName(file.name);
         setUploading(false);
         onFileUploaded?.(storageId, file.name);
 
-        // Step 4: Parse file content
         setParsing(true);
         const content = await parseFile({ storageId });
         onContentExtracted(content);
       } catch {
+        setFileName(null);
         setError("Upload failed. Please try again.");
       } finally {
         setUploading(false);

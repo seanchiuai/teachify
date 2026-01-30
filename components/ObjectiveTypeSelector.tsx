@@ -1,12 +1,12 @@
 "use client";
 
 const OBJECTIVE_TYPES = [
-  { value: "understand", label: "Understand", description: "Students should understand that..." },
-  { value: "explain", label: "Explain", description: "Students should be able to explain..." },
-  { value: "apply", label: "Apply", description: "Students should be able to apply..." },
-  { value: "distinguish", label: "Distinguish", description: "Students should distinguish between..." },
-  { value: "perform", label: "Perform", description: "Students should be able to perform..." },
-  { value: "analyze", label: "Analyze", description: "Students should be able to analyze..." },
+  { value: "understand", label: "Understand" },
+  { value: "explain", label: "Explain" },
+  { value: "apply", label: "Apply" },
+  { value: "distinguish", label: "Distinguish" },
+  { value: "perform", label: "Perform" },
+  { value: "analyze", label: "Analyze" },
 ] as const;
 
 export type ObjectiveType = (typeof OBJECTIVE_TYPES)[number]["value"];

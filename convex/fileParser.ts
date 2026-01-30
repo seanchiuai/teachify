@@ -19,7 +19,7 @@ export const parseFile = action({
     }
 
     if (type.includes("wordprocessingml")) {
-      const mammoth = await import("mammoth");
+      const mammoth = (await import("mammoth")).default;
       const result = await mammoth.extractRawText({ buffer });
       return result.value;
     }
