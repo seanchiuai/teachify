@@ -245,7 +245,6 @@ export default function HostPage() {
               <p className="text-muted-foreground">Final Results & Analytics</p>
             </div>
 
-            {/* Overall Summary */}
             {gameAnalytics && (
               <div className="grid gap-4 md:grid-cols-4 mb-6">
                 <div className="p-4 rounded-xl border border-border bg-card text-center">
@@ -269,7 +268,6 @@ export default function HostPage() {
               </div>
             )}
 
-            {/* Comprehension Gaps */}
             {gameAnalytics && gameAnalytics.comprehensionGaps.length > 0 && (
               <div className="p-6 rounded-xl border border-orange-500/30 bg-orange-500/5 mb-6">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
@@ -301,7 +299,6 @@ export default function HostPage() {
               </div>
             )}
 
-            {/* Per-Question Breakdown */}
             {gameAnalytics && (
               <div className="p-6 rounded-xl border border-border bg-card mb-6">
                 <h3 className="font-semibold mb-4">Per-Question Breakdown</h3>
@@ -335,7 +332,6 @@ export default function HostPage() {
               </div>
             )}
 
-            {/* Final Leaderboard */}
             <div className="p-6 rounded-xl border border-border bg-card">
               <h3 className="font-semibold mb-6 text-center text-xl">Final Leaderboard</h3>
               <div className="space-y-3 max-w-md mx-auto">

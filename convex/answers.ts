@@ -135,21 +135,18 @@ export const gameAnalytics = query({
     const totalPlayers = players.length;
     const questionCount = game.questions.length;
 
-    // Per-question stats
     const questionStats = game.questions.map((q, idx) => {
       const answers = allAnswers.filter((a) => a.questionIndex === idx);
       const total = answers.length;
       const correctCount = answers.filter((a) => a.correct).length;
       const percentCorrect = total > 0 ? Math.round((correctCount / total) * 100) : 0;
 
-      // Distribution of answers
       const distribution: Record<string, number> = {};
       for (const a of answers) {
         const key = typeof a.answer === "string" ? a.answer : JSON.stringify(a.answer);
         distribution[key] = (distribution[key] || 0) + 1;
       }
 
-      // Find most common wrong answer
       let mostCommonWrong: { answer: string; count: number } | null = null;
       const correctAnswer = typeof q.correct === "string" ? q.correct : JSON.stringify(q.correct);
       for (const [answer, count] of Object.entries(distribution)) {
@@ -175,12 +172,10 @@ export const gameAnalytics = query({
       };
     });
 
-    // Overall stats
     const totalAnswers = allAnswers.length;
     const totalCorrect = allAnswers.filter((a) => a.correct).length;
     const overallPercent = totalAnswers > 0 ? Math.round((totalCorrect / totalAnswers) * 100) : 0;
 
-    // Comprehension gaps (questions with < 60% correct)
     const comprehensionGaps = questionStats
       .filter((q) => q.needsAttention)
       .map((q) => ({
