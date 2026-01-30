@@ -7,7 +7,7 @@ This document defines all edge cases that must be handled before Phase 5 complet
 ## Upload Edge Cases
 
 ### File Size
-- [ ] **File > 10MB**
+- [x] **File > 10MB**
   - Trigger: Upload PDF larger than 10MB
   - Expected: Show "File too large (max 10MB)" error
   - File NOT uploaded to storage
@@ -30,7 +30,7 @@ This document defines all edge cases that must be handled before Phase 5 complet
   - Expected: Show "File appears to be empty or contains no extractable text"
   - Allow retry with different file
 
-- [ ] **Content < 50 words**
+- [x] **Content < 50 words**
   - Trigger: Paste very short text (20 words)
   - Expected: Show warning "Content may be too short for quality questions"
   - Allow user to proceed anyway (warning, not blocker)
@@ -52,7 +52,7 @@ This document defines all edge cases that must be handled before Phase 5 complet
   - OR clear text area when file uploaded
 
 ### File Types
-- [ ] **Unsupported file type**
+- [x] **Unsupported file type**
   - Trigger: Upload .exe, .jpg, .mp3, etc.
   - Expected: Show "Unsupported file type. Please use PDF, PPTX, or DOCX"
   - File NOT uploaded
@@ -152,16 +152,16 @@ This document defines all edge cases that must be handled before Phase 5 complet
   - No manual refresh needed
 
 ### Player Names
-- [ ] **2 players with same name**
+- [x] **2 players with same name**
   - Trigger: Both type "Alex" and join
   - Expected: Auto-suffix: "Alex", "Alex (2)"
   - Both can play independently
 
-- [ ] **Very long player name**
+- [x] **Very long player name**
   - Trigger: Name with 100+ characters
   - Expected: Truncate to 20 chars, or reject with error
 
-- [ ] **Empty player name**
+- [x] **Empty player name**
   - Trigger: Submit with blank name
   - Expected: Validation error "Please enter your name"
 
@@ -175,23 +175,23 @@ This document defines all edge cases that must be handled before Phase 5 complet
   - Expected: Answer rejected, player scores 0 for that question
   - Show "Time's up!" feedback
 
-- [ ] **Player submits multiple times**
+- [x] **Player submits multiple times**
   - Trigger: Double-click answer button
   - Expected: First answer counts, subsequent ignored
   - No duplicate entries in answers table
 
-- [ ] **Player answers out of order**
+- [x] **Player answers out of order**
   - Trigger: Somehow submit answer for wrong questionIndex
   - Expected: Server validates questionIndex matches currentQuestion
   - Reject invalid submissions
 
 ### Host Controls
-- [ ] **Start Game with 0 players**
+- [x] **Start Game with 0 players**
   - Trigger: Click Start Game when no one joined
   - Expected: Button disabled (prevented in UI)
   - If somehow triggered, show error
 
-- [ ] **Next Question at last question**
+- [x] **Next Question at last question**
   - Trigger: Click Next Question on Q10/10
   - Expected: Transitions to "complete" state instead
 
@@ -204,7 +204,7 @@ This document defines all edge cases that must be handled before Phase 5 complet
 ## Iframe Edge Cases
 
 ### Loading Failures
-- [ ] **Iframe never loads**
+- [x] **Iframe never loads**
   - Trigger: HTML has syntax error preventing load
   - Expected: After 10s with no GAME_READY, show error overlay
   - Offer "Reload" or "Regenerate Game" button
@@ -311,5 +311,5 @@ If a case fails:
 
 ---
 
-**Last Updated:** [Update this when edge cases are verified]
-**Verified By:** [Name/date when complete]
+**Last Updated:** 2025-01-30
+**Verified By:** Phase 5 Polish
