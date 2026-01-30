@@ -37,7 +37,7 @@ LessonPlay is a web app that enables teachers to instantly transform lesson mate
 **Acceptance Criteria:**
 - [x] Input field for free-text learning objective ("What should students be able to do?")
 - [x] Objective type selector with 6 options: Understand, Explain, Apply, Distinguish, Perform, Analyze
-- [ ] Selected objective type influences AI question generation
+- [x] Selected objective type influences AI question generation
 - [x] Typecheck passes
 - [x] Verify in browser
 
@@ -45,17 +45,17 @@ LessonPlay is a web app that enables teachers to instantly transform lesson mate
 **Description:** As a teacher, I want the system to generate a unique, playable HTML game from my content so that I get a ready-to-play interactive experience in seconds.
 
 **Acceptance Criteria:**
-- [ ] Gemini API processes uploaded content + objective + objective type
-- [ ] Step 1: Generates 8-10 questions as structured JSON (questions include: type, question text, options, correct answer(s), explanation, misconception)
-- [ ] Step 2: Generates a self-contained HTML game (inline CSS + JS, no external dependencies) using the questions
-- [ ] Generated HTML implements the postMessage communication protocol (GAME_READY, ANSWER_SUBMITTED, GAME_OVER)
-- [ ] Generated HTML is mobile-responsive (viewport meta, relative units, pointer events, 44px+ touch targets)
-- [ ] HTML is validated before storage (contains postMessage code, no external URLs)
-- [ ] Unique 6-character game code generated
-- [ ] Game stored in Convex with questions + HTML string
-- [ ] Generation completes in under 30 seconds
-- [ ] Typecheck passes
-- [ ] Verify in browser
+- [x] Gemini API processes uploaded content + objective + objective type
+- [x] Step 1: Generates 8-10 questions as structured JSON (questions include: type, question text, options, correct answer(s), explanation, misconception)
+- [x] Step 2: Generates a self-contained HTML game (inline CSS + JS, no external dependencies) using the questions
+- [x] Generated HTML implements the postMessage communication protocol (GAME_READY, ANSWER_SUBMITTED, GAME_OVER)
+- [x] Generated HTML is mobile-responsive (viewport meta, relative units, pointer events, 44px+ touch targets)
+- [x] HTML is validated before storage (contains postMessage code, no external URLs)
+- [x] Unique 6-character game code generated
+- [x] Game stored in Convex with questions + HTML string
+- [x] Generation completes in under 30 seconds
+- [x] Typecheck passes
+- [x] Verify in browser
 
 ### US-004: Host a Game Session
 **Description:** As a teacher, I want to host a live game session so that I can control question flow and monitor student responses in real-time.

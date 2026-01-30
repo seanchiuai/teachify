@@ -1,55 +1,67 @@
 "use client";
 
 import { useState } from "react";
+import { useAction } from "convex/react";
+import { useRouter } from "next/navigation";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { TextContentInput } from "@/components/TextContentInput";
 import { ObjectiveTypeSelector, ObjectiveType } from "@/components/ObjectiveTypeSelector";
+import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 
 export default function HomePage() {
+  const router = useRouter();
   const [content, setContent] = useState("");
   const [objective, setObjective] = useState("");
   const [objectiveType, setObjectiveType] = useState<ObjectiveType>("understand");
   const [fileId, setFileId] = useState<Id<"_storage"> | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const generateGame = useAction(api.generate.generateGame);
 
   const canGenerate = content.trim().length > 0 && objective.trim().length > 0;
 
   const handleGenerate = async () => {
     if (!canGenerate) return;
     setLoading(true);
-    // Phase 2: Will call generateGame action
-    // For now, just show we have the data
-    console.log("Generate game with:", { content, objective, objectiveType, fileId });
-    setLoading(false);
+    setError(null);
+    try {
+      const result = await generateGame({
+        content,
+        objective,
+        objectiveType,
+        fileId: fileId ?? undefined,
+      });
+      router.push(`/host/${result.code}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate game");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <main className="min-h-screen bg-background">
       <div className="max-w-3xl mx-auto py-12 px-4">
-        {/* Header */}
         <h1 className="text-4xl font-bold text-center mb-2">LessonPlay</h1>
         <p className="text-center text-muted-foreground mb-8">
           Transform lesson materials into interactive classroom games
         </p>
 
-        {/* File Upload Zone */}
         <FileUploadZone
           onContentExtracted={(text) => setContent(text)}
           onFileUploaded={(storageId) => setFileId(storageId)}
         />
 
-        {/* Divider */}
         <div className="flex items-center gap-4 my-6">
           <div className="flex-1 h-px bg-border" />
           <span className="text-sm text-muted-foreground">or paste text below</span>
           <div className="flex-1 h-px bg-border" />
         </div>
 
-        {/* Text Content Input */}
         <TextContentInput value={content} onChange={setContent} />
 
-        {/* Learning Objective */}
         <div className="mt-8">
           <label className="block text-sm font-medium mb-2">
             What should students learn from this?
@@ -63,13 +75,11 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Objective Type Selector */}
         <div className="mt-6">
           <label className="block text-sm font-medium mb-2">Objective Type</label>
           <ObjectiveTypeSelector value={objectiveType} onChange={setObjectiveType} />
         </div>
 
-        {/* Generate Button */}
         <button
           onClick={handleGenerate}
           disabled={!canGenerate || loading}
@@ -78,14 +88,19 @@ export default function HomePage() {
           {loading ? (
             <span className="flex items-center justify-center gap-2">
               <span className="animate-spin h-5 w-5 border-2 border-primary-foreground border-t-transparent rounded-full" />
-              Generating questions...
+              Generating game...
             </span>
           ) : (
             "Generate Game"
           )}
         </button>
 
-        {/* Content preview (for debugging) */}
+        {error && (
+          <div className="mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
+
         {content && (
           <div className="mt-8 p-4 bg-muted rounded-lg">
             <p className="text-sm text-muted-foreground mb-2">Content preview:</p>
