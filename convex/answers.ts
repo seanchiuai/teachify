@@ -113,3 +113,92 @@ export const getByPlayerAndQuestion = query({
       .first();
   },
 });
+
+export const gameAnalytics = query({
+  args: {
+    gameId: v.id("games"),
+  },
+  handler: async (ctx, args) => {
+    const game = await ctx.db.get(args.gameId);
+    if (!game) return null;
+
+    const allAnswers = await ctx.db
+      .query("answers")
+      .withIndex("by_game", (q) => q.eq("gameId", args.gameId))
+      .collect();
+
+    const players = await ctx.db
+      .query("players")
+      .withIndex("by_game", (q) => q.eq("gameId", args.gameId))
+      .collect();
+
+    const totalPlayers = players.length;
+    const questionCount = game.questions.length;
+
+    // Per-question stats
+    const questionStats = game.questions.map((q, idx) => {
+      const answers = allAnswers.filter((a) => a.questionIndex === idx);
+      const total = answers.length;
+      const correctCount = answers.filter((a) => a.correct).length;
+      const percentCorrect = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+
+      // Distribution of answers
+      const distribution: Record<string, number> = {};
+      for (const a of answers) {
+        const key = typeof a.answer === "string" ? a.answer : JSON.stringify(a.answer);
+        distribution[key] = (distribution[key] || 0) + 1;
+      }
+
+      // Find most common wrong answer
+      let mostCommonWrong: { answer: string; count: number } | null = null;
+      const correctAnswer = typeof q.correct === "string" ? q.correct : JSON.stringify(q.correct);
+      for (const [answer, count] of Object.entries(distribution)) {
+        if (answer !== correctAnswer) {
+          if (!mostCommonWrong || count > mostCommonWrong.count) {
+            mostCommonWrong = { answer, count };
+          }
+        }
+      }
+
+      return {
+        questionIndex: idx,
+        question: q.question,
+        correct: q.correct,
+        total,
+        correctCount,
+        percentCorrect,
+        distribution,
+        mostCommonWrong,
+        misconception: q.misconception,
+        explanation: q.explanation,
+        needsAttention: percentCorrect < 60 && total > 0,
+      };
+    });
+
+    // Overall stats
+    const totalAnswers = allAnswers.length;
+    const totalCorrect = allAnswers.filter((a) => a.correct).length;
+    const overallPercent = totalAnswers > 0 ? Math.round((totalCorrect / totalAnswers) * 100) : 0;
+
+    // Comprehension gaps (questions with < 60% correct)
+    const comprehensionGaps = questionStats
+      .filter((q) => q.needsAttention)
+      .map((q) => ({
+        questionIndex: q.questionIndex,
+        question: q.question,
+        percentCorrect: q.percentCorrect,
+        misconception: q.misconception,
+        mostCommonWrong: q.mostCommonWrong,
+      }));
+
+    return {
+      totalPlayers,
+      questionCount,
+      overallPercent,
+      totalAnswers,
+      totalCorrect,
+      questionStats,
+      comprehensionGaps,
+    };
+  },
+});

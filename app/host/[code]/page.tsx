@@ -13,6 +13,10 @@ export default function HostPage() {
     api.answers.questionStats,
     game && game.state !== "lobby" ? { gameId: game._id, questionIndex: game.currentQuestion } : "skip"
   );
+  const gameAnalytics = useQuery(
+    api.answers.gameAnalytics,
+    game && game.state === "complete" ? { gameId: game._id } : "skip"
+  );
 
   const startGame = useMutation(api.games.startGame);
   const showResults = useMutation(api.games.showResults);
@@ -238,9 +242,100 @@ export default function HostPage() {
           <>
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold mb-2">Game Complete!</h2>
-              <p className="text-muted-foreground">Final Results</p>
+              <p className="text-muted-foreground">Final Results & Analytics</p>
             </div>
 
+            {/* Overall Summary */}
+            {gameAnalytics && (
+              <div className="grid gap-4 md:grid-cols-4 mb-6">
+                <div className="p-4 rounded-xl border border-border bg-card text-center">
+                  <p className="text-sm text-muted-foreground">Overall Score</p>
+                  <p className={`text-3xl font-bold ${gameAnalytics.overallPercent >= 70 ? "text-green-600" : gameAnalytics.overallPercent >= 50 ? "text-yellow-600" : "text-red-500"}`}>
+                    {gameAnalytics.overallPercent}%
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl border border-border bg-card text-center">
+                  <p className="text-sm text-muted-foreground">Players</p>
+                  <p className="text-3xl font-bold">{gameAnalytics.totalPlayers}</p>
+                </div>
+                <div className="p-4 rounded-xl border border-border bg-card text-center">
+                  <p className="text-sm text-muted-foreground">Questions</p>
+                  <p className="text-3xl font-bold">{gameAnalytics.questionCount}</p>
+                </div>
+                <div className="p-4 rounded-xl border border-border bg-card text-center">
+                  <p className="text-sm text-muted-foreground">Correct Answers</p>
+                  <p className="text-3xl font-bold">{gameAnalytics.totalCorrect}/{gameAnalytics.totalAnswers}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Comprehension Gaps */}
+            {gameAnalytics && gameAnalytics.comprehensionGaps.length > 0 && (
+              <div className="p-6 rounded-xl border border-orange-500/30 bg-orange-500/5 mb-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <span className="text-orange-500">⚠</span> Comprehension Gaps
+                </h3>
+                <div className="space-y-4">
+                  {gameAnalytics.comprehensionGaps.map((gap) => (
+                    <div key={gap.questionIndex} className="p-4 bg-background rounded-lg">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <p className="text-sm text-muted-foreground mb-1">Question {gap.questionIndex + 1}</p>
+                          <p className="font-medium">{gap.question}</p>
+                          {gap.misconception && (
+                            <p className="text-sm text-orange-600 mt-2">
+                              <span className="font-medium">Misconception:</span> {gap.misconception}
+                            </p>
+                          )}
+                          {gap.mostCommonWrong && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Most common wrong answer: &quot;{gap.mostCommonWrong.answer}&quot; ({gap.mostCommonWrong.count} students)
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-red-500 font-bold">{gap.percentCorrect}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Per-Question Breakdown */}
+            {gameAnalytics && (
+              <div className="p-6 rounded-xl border border-border bg-card mb-6">
+                <h3 className="font-semibold mb-4">Per-Question Breakdown</h3>
+                <div className="space-y-3">
+                  {gameAnalytics.questionStats.map((q) => (
+                    <div key={q.questionIndex} className="relative">
+                      <div
+                        className={`absolute inset-0 rounded ${q.percentCorrect >= 70 ? "bg-green-500/20" : q.percentCorrect >= 50 ? "bg-yellow-500/20" : "bg-red-500/20"}`}
+                        style={{ width: `${q.percentCorrect}%` }}
+                      />
+                      <div className="relative flex items-center justify-between p-3">
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono text-sm text-muted-foreground w-8">Q{q.questionIndex + 1}</span>
+                          <span className="text-sm truncate max-w-[300px]">
+                            {q.question.length > 50 ? q.question.slice(0, 50) + "..." : q.question}
+                          </span>
+                          {q.needsAttention && (
+                            <span className="text-orange-500 text-sm" title={q.misconception}>⚠</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm text-muted-foreground">{q.correctCount}/{q.total}</span>
+                          <span className={`font-bold w-12 text-right ${q.percentCorrect >= 70 ? "text-green-600" : q.percentCorrect >= 50 ? "text-yellow-600" : "text-red-500"}`}>
+                            {q.percentCorrect}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Final Leaderboard */}
             <div className="p-6 rounded-xl border border-border bg-card">
               <h3 className="font-semibold mb-6 text-center text-xl">Final Leaderboard</h3>
               <div className="space-y-3 max-w-md mx-auto">

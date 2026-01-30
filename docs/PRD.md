@@ -99,21 +99,21 @@ LessonPlay is a web app that enables teachers to instantly transform lesson mate
 **Description:** As a teacher, I want to see per-question analytics after the game so that I can identify where students struggled.
 
 **Acceptance Criteria:**
-- [ ] Per-question breakdown: % correct, common wrong answers
-- [ ] Misconception tags shown for frequently missed questions
-- [ ] Overall class performance summary
-- [ ] Typecheck passes
-- [ ] Verify in browser
+- [x] Per-question breakdown: % correct, common wrong answers
+- [x] Misconception tags shown for frequently missed questions
+- [x] Overall class performance summary
+- [x] Typecheck passes
+- [x] Verify in browser
 
 ### US-008: Leaderboard
 **Description:** As a student, I want to see my ranking during and after the game so that I stay motivated and engaged.
 
 **Acceptance Criteria:**
-- [ ] Leaderboard shown between questions (top players)
-- [ ] Final leaderboard at game end with full rankings
-- [ ] Score based on correctness and speed
-- [ ] Typecheck passes
-- [ ] Verify in browser
+- [x] Leaderboard shown between questions (top players)
+- [x] Final leaderboard at game end with full rankings
+- [x] Score based on correctness and speed
+- [x] Typecheck passes
+- [x] Verify in browser
 
 ---
 
