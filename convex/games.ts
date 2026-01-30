@@ -57,3 +57,54 @@ export const getByCode = query({
       .first();
   },
 });
+
+export const get = query({
+  args: { gameId: v.id("games") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.gameId);
+  },
+});
+
+export const startGame = mutation({
+  args: { gameId: v.id("games") },
+  handler: async (ctx, args) => {
+    const game = await ctx.db.get(args.gameId);
+    if (!game) throw new Error("Game not found");
+    if (game.state !== "lobby") throw new Error("Cannot start game");
+
+    await ctx.db.patch(args.gameId, {
+      state: "question",
+      currentQuestion: 0,
+    });
+  },
+});
+
+export const showResults = mutation({
+  args: { gameId: v.id("games") },
+  handler: async (ctx, args) => {
+    const game = await ctx.db.get(args.gameId);
+    if (!game) throw new Error("Game not found");
+    if (game.state !== "question") throw new Error("Invalid state");
+
+    await ctx.db.patch(args.gameId, { state: "results" });
+  },
+});
+
+export const nextQuestion = mutation({
+  args: { gameId: v.id("games") },
+  handler: async (ctx, args) => {
+    const game = await ctx.db.get(args.gameId);
+    if (!game) throw new Error("Game not found");
+    if (game.state !== "results") throw new Error("Invalid state");
+
+    const nextIndex = game.currentQuestion + 1;
+    if (nextIndex >= game.questions.length) {
+      await ctx.db.patch(args.gameId, { state: "complete" });
+    } else {
+      await ctx.db.patch(args.gameId, {
+        state: "question",
+        currentQuestion: nextIndex,
+      });
+    }
+  },
+});

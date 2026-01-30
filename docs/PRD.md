@@ -61,39 +61,39 @@ LessonPlay is a web app that enables teachers to instantly transform lesson mate
 **Description:** As a teacher, I want to host a live game session so that I can control question flow and monitor student responses in real-time.
 
 **Acceptance Criteria:**
-- [ ] Host view at /host/[code] shows large game code
-- [ ] Real-time player list updates as students join
-- [ ] "Start Game" button enabled when 1+ players joined
-- [ ] Host controls: Next Question, Show Results
-- [ ] Live response count and % correct per question
-- [ ] Typecheck passes
-- [ ] Verify in browser
+- [x] Host view at /host/[code] shows large game code
+- [x] Real-time player list updates as students join
+- [x] "Start Game" button enabled when 1+ players joined
+- [x] Host controls: Next Question, Show Results
+- [x] Live response count and % correct per question
+- [x] Typecheck passes
+- [x] Verify in browser
 
 ### US-005: Join and Play a Game
 **Description:** As a student, I want to join a game by code and play an AI-generated interactive game so that I can participate without creating an account.
 
 **Acceptance Criteria:**
-- [ ] /play page with game code input (6 characters) and display name
-- [ ] No account required to join
-- [ ] Lobby waiting screen shows other players joining
-- [ ] Game renders in a sandboxed iframe (`sandbox="allow-scripts"`, no `allow-same-origin`)
-- [ ] Parent communicates with iframe via MessageChannel (not raw postMessage)
-- [ ] Answers flow from iframe → parent → Convex for validation and scoring
-- [ ] Timer runs in parent app (authoritative), iframe shows visual timer only
-- [ ] Typecheck passes
-- [ ] Verify in browser
+- [x] /play page with game code input (6 characters) and display name
+- [x] No account required to join
+- [x] Lobby waiting screen shows other players joining
+- [x] Game renders in a sandboxed iframe (`sandbox="allow-scripts"`, no `allow-same-origin`)
+- [x] Parent communicates with iframe via MessageChannel (not raw postMessage)
+- [x] Answers flow from iframe → parent → Convex for validation and scoring
+- [x] Timer runs in parent app (authoritative), iframe shows visual timer only
+- [x] Typecheck passes
+- [x] Verify in browser
 
 ### US-006: Real-time Game Sync
 **Description:** As a player, I want the game state to sync in real-time so that all participants see questions and results simultaneously.
 
 **Acceptance Criteria:**
-- [ ] Convex real-time subscriptions sync game state across all clients
-- [ ] Game state machine: lobby → playing → question → results → complete
-- [ ] Player joins reflected instantly on host and other players
-- [ ] Answer submissions update host view in real-time
-- [ ] Supports 5+ simultaneous players
-- [ ] Typecheck passes
-- [ ] Verify in browser
+- [x] Convex real-time subscriptions sync game state across all clients
+- [x] Game state machine: lobby → playing → question → results → complete
+- [x] Player joins reflected instantly on host and other players
+- [x] Answer submissions update host view in real-time
+- [x] Supports 5+ simultaneous players
+- [x] Typecheck passes
+- [x] Verify in browser
 
 ### US-007: View Game Results
 **Description:** As a teacher, I want to see per-question analytics after the game so that I can identify where students struggled.

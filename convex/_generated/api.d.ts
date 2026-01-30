@@ -8,10 +8,12 @@
  * @module
  */
 
+import type * as answers from "../answers.js";
 import type * as fileParser from "../fileParser.js";
 import type * as files from "../files.js";
 import type * as games from "../games.js";
 import type * as generate from "../generate.js";
+import type * as players from "../players.js";
 
 import type {
   ApiFromModules,
@@ -20,10 +22,12 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  answers: typeof answers;
   fileParser: typeof fileParser;
   files: typeof files;
   games: typeof games;
   generate: typeof generate;
+  players: typeof players;
 }>;
 
 /**
