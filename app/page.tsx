@@ -20,6 +20,8 @@ export default function HomePage() {
 
   const generateGame = useAction(api.generate.generateGame);
 
+  const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
+  const isContentShort = wordCount > 0 && wordCount < 50;
   const canGenerate = content.trim().length > 0 && objective.trim().length > 0;
 
   const handleGenerate = async () => {
@@ -103,7 +105,14 @@ export default function HomePage() {
 
         {content && (
           <div className="mt-8 p-4 bg-muted rounded-lg">
-            <p className="text-sm text-muted-foreground mb-2">Content preview:</p>
+            <p className="text-sm text-muted-foreground mb-2">
+              Content preview ({wordCount} words):
+            </p>
+            {isContentShort && (
+              <p className="text-sm text-yellow-600 mb-2">
+                Content may be too short for quality questions. Consider adding more detail.
+              </p>
+            )}
             <p className="text-sm line-clamp-3">{content.substring(0, 300)}...</p>
           </div>
         )}

@@ -23,9 +23,11 @@ export default function PlayerGamePage() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const portRef = useRef<MessagePort | null>(null);
   const [iframeReady, setIframeReady] = useState(false);
+  const [iframeError, setIframeError] = useState(false);
   const [answered, setAnswered] = useState(false);
   const startTimeRef = useRef<number>(0);
   const lastQuestionRef = useRef<number>(-1);
+  const iframeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (game) {
@@ -56,13 +58,20 @@ export default function PlayerGamePage() {
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
 
+    if (iframeTimeoutRef.current) clearTimeout(iframeTimeoutRef.current);
+    iframeTimeoutRef.current = setTimeout(() => {
+      if (!iframeReady) setIframeError(true);
+    }, 10000);
+
     const channel = new MessageChannel();
     portRef.current = channel.port1;
 
     channel.port1.onmessage = async (event) => {
       const { type, payload } = event.data;
       if (type === "GAME_READY") {
+        if (iframeTimeoutRef.current) clearTimeout(iframeTimeoutRef.current);
         setIframeReady(true);
+        setIframeError(false);
       } else if (type === "ANSWER_SUBMITTED" && game && playerId && !answered) {
         setAnswered(true);
         const timeMs = Date.now() - startTimeRef.current;
@@ -74,14 +83,14 @@ export default function PlayerGamePage() {
             answer: payload.answer,
             timeMs,
           });
-        } catch (err) {
+        } catch {
           // Already answered or invalid state
         }
       }
     };
 
     iframe.contentWindow.postMessage({ type: "INIT_PORT" }, "*", [channel.port2]);
-  }, [game, playerId, answered, submitAnswer]);
+  }, [game, playerId, answered, submitAnswer, iframeReady]);
 
   useEffect(() => {
     if (iframeReady && game?.state === "question" && portRef.current) {
@@ -265,6 +274,23 @@ export default function PlayerGamePage() {
         {answered && (
           <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
             <p className="text-green-600 font-medium">Answer submitted! Waiting for results...</p>
+          </div>
+        )}
+
+        {iframeError && (
+          <div className="mb-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-center">
+            <p className="text-destructive font-medium mb-2">Game failed to load</p>
+            <button
+              onClick={() => {
+                setIframeError(false);
+                setIframeReady(false);
+                const iframe = iframeRef.current;
+                if (iframe) iframe.src = iframe.src;
+              }}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm"
+            >
+              Reload Game
+            </button>
           </div>
         )}
 

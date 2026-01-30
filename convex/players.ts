@@ -11,9 +11,27 @@ export const join = mutation({
     if (!game) throw new Error("Game not found");
     if (game.state !== "lobby") throw new Error("Game already started");
 
+    const trimmedName = args.name.trim().slice(0, 20);
+    if (trimmedName.length === 0) throw new Error("Name is required");
+
+    const existingPlayers = await ctx.db
+      .query("players")
+      .withIndex("by_game", (q) => q.eq("gameId", args.gameId))
+      .collect();
+
+    let finalName = trimmedName;
+    const existingNames = existingPlayers.map((p) => p.name);
+    if (existingNames.includes(trimmedName)) {
+      let suffix = 2;
+      while (existingNames.includes(`${trimmedName} (${suffix})`)) {
+        suffix++;
+      }
+      finalName = `${trimmedName} (${suffix})`;
+    }
+
     return await ctx.db.insert("players", {
       gameId: args.gameId,
-      name: args.name.trim(),
+      name: finalName,
       score: 0,
     });
   },
