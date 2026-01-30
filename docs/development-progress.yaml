@@ -3,43 +3,67 @@
 
 current_phase:
   phase: 0
-  name: "Planning & Reiterating"
-  description: "Review PRD, refine requirements, plan architecture and implementation approach"
+  name: "Planning & Architecture Validation"
+  description: "Finalize documentation, validate architecture decisions, prepare for implementation"
   started: "2025-01-29"
   status: "in-progress"  # not-started | in-progress | complete
   completion_criteria:
-    - "Next.js 14 + Convex + Tailwind + shadcn/ui project scaffolded and running"
-    - "Convex schema defined for games, players, answers tables (with gameHtml field)"
-    - "File upload (PDF, PPTX, DOCX) and text paste working"
-    - "Learning objective input + 6-type objective selector working"
-    - "US-001 and US-002 acceptance criteria met"
+    - "PRD.md finalized with all acceptance criteria defined"
+    - "design.md complete with all page wireframes"
+    - "Skills reference files verified against current API docs"
+    - "api-contracts.md created with component interfaces"
+    - "edge-cases.md created with Phase 5 checklist"
+    - "All phase prompts expanded with checkpoints and deliverables"
+    - "NO CODE - documentation only"
 
 # Phase History
 completed_phases: []
+
+# Phase Dependencies
+# Each phase requires all previous phases to be complete
+# Phase N depends on Phase N-1
 
 # All Available Phases
 phases:
   1:
     name: "Project Setup & Upload"
     description: "Initialize project, define schema, build upload and objective input UI"
+    prerequisite: "Phase 0 complete (documentation finalized)"
+    user_stories: ["US-001", "US-002"]
     key_deliverables:
       - "Working Next.js + Convex dev environment"
       - "Convex schema for games, players, answers (with gameHtml field)"
       - "Homepage with file upload zone, text input, objective input, type selector"
+    checkpoints:
+      - "1.1: Project scaffolding - npm run dev works"
+      - "1.2: Convex backend setup - schema defined, mutations work"
+      - "1.3: File upload component - files stored in Convex"
+      - "1.4: Content parsing - PDF/PPTX/DOCX to text"
+      - "1.5: Objective input UI - form creates game record"
 
   2:
     name: "AI Game Generation (Two-Step Pipeline)"
     description: "Integrate Gemini API, generate structured questions, then generate self-contained HTML game"
+    prerequisite: "Phase 1 complete (file parsing working, game records created)"
+    user_stories: ["US-003"]
     key_deliverables:
       - "Gemini API integration via Convex action"
       - "Step 1: Prompt that produces pedagogically-grounded questions (structured JSON)"
       - "Step 2: Prompt that produces self-contained HTML game (inline CSS/JS, postMessage protocol)"
       - "HTML validation (postMessage present, no external URLs)"
       - "Game creation with 6-char code, stored questions + gameHtml"
+    checkpoints:
+      - "2.1: Gemini API connection - test call works"
+      - "2.2: Question generation - structured JSON output"
+      - "2.3: HTML game generation - self-contained HTML"
+      - "2.4: HTML validation - security checks pass"
+      - "2.5: Full pipeline - upload to generated game"
 
   3:
     name: "Real-time Game Engine + Iframe Rendering"
     description: "Build game state machine, iframe sandbox, MessageChannel communication, host controls, student join flow"
+    prerequisite: "Phase 2 complete (gameHtml field populated, questions generated)"
+    user_stories: ["US-004", "US-005", "US-006"]
     key_deliverables:
       - "Game state machine: lobby → playing → question → results → complete"
       - "GameIframe component with sandbox='allow-scripts' and MessageChannel"
@@ -47,21 +71,43 @@ phases:
       - "Host view with game code, player list, controls"
       - "Student join + play flow with real-time sync"
       - "Authoritative timer in parent, answer validation via Convex"
+    checkpoints:
+      - "3.1: Host lobby - game code display, player list"
+      - "3.2: Student join - code input, name, lobby waiting"
+      - "3.3: Real-time sync - players appear instantly"
+      - "3.4: GameIframe - renders HTML, MessageChannel setup"
+      - "3.5: Game flow - start, questions, answers, timer"
 
   4:
     name: "Leaderboard & Analytics"
     description: "Build leaderboard, feedback overlays, results analytics (all in parent app, outside iframe)"
+    prerequisite: "Phase 3 complete (answers table populated, scoring logic working)"
+    user_stories: ["US-007", "US-008"]
     key_deliverables:
       - "Leaderboard between questions and at game end"
       - "Feedback overlay in parent (correct/wrong + explanation)"
       - "Per-question analytics and comprehension gap display"
+    checkpoints:
+      - "4.1: Score calculation - correctness + speed"
+      - "4.2: Leaderboard component - between questions"
+      - "4.3: Feedback overlay - correct/wrong with explanation"
+      - "4.4: Results dashboard - per-question analytics"
+      - "4.5: Final leaderboard - game complete view"
 
   5:
     name: "Polish & Demo Prep"
     description: "End-to-end testing, performance, edge cases, iframe error handling, demo readiness"
+    prerequisite: "Phase 4 complete (all US-001 through US-008 implemented)"
+    user_stories: ["All - verification"]
     key_deliverables:
       - "Full flow working under 60 seconds"
       - "5+ simultaneous players tested"
       - "Iframe error handling (retry/regenerate option)"
       - "Mobile-responsive student view (iframe + parent wrapper)"
       - "Demo-ready with sample content"
+    checkpoints:
+      - "5.1: Edge case handling - see docs/edge-cases.md"
+      - "5.2: Performance verification - <60s generation"
+      - "5.3: Multi-player testing - 5+ concurrent"
+      - "5.4: Mobile responsiveness - student view"
+      - "5.5: Demo preparation - sample content ready"
