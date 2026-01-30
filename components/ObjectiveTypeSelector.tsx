@@ -1,41 +1,42 @@
 "use client";
 
-const OBJECTIVE_TYPES = [
-  { value: "understand", label: "Understand" },
-  { value: "explain", label: "Explain" },
-  { value: "apply", label: "Apply" },
-  { value: "distinguish", label: "Distinguish" },
-  { value: "perform", label: "Perform" },
-  { value: "analyze", label: "Analyze" },
-] as const;
+export type ObjectiveType = "understand" | "explain" | "apply" | "distinguish" | "perform" | "analyze";
 
-export type ObjectiveType = (typeof OBJECTIVE_TYPES)[number]["value"];
-
-export function ObjectiveTypeSelector({
-  value,
-  onChange,
-}: {
+interface ObjectiveTypeSelectorProps {
   value: ObjectiveType;
-  onChange: (type: ObjectiveType) => void;
-}) {
+  onChange: (value: ObjectiveType) => void;
+}
+
+const objectives: { value: ObjectiveType; label: string; icon: string }[] = [
+  { value: "understand", label: "Understand", icon: "💡" },
+  { value: "explain", label: "Explain", icon: "🗣️" },
+  { value: "apply", label: "Apply", icon: "⚡" },
+  { value: "distinguish", label: "Distinguish", icon: "🔍" },
+  { value: "perform", label: "Perform", icon: "🎯" },
+  { value: "analyze", label: "Analyze", icon: "📊" },
+];
+
+export function ObjectiveTypeSelector({ value, onChange }: ObjectiveTypeSelectorProps) {
   return (
     <div className="flex flex-wrap gap-2">
-      {OBJECTIVE_TYPES.map((type) => (
+      {objectives.map((obj) => (
         <button
-          key={type.value}
+          key={obj.value}
           type="button"
-          onClick={() => onChange(type.value)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            value === type.value
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted hover:bg-muted/80 text-foreground"
-          }`}
+          onClick={() => onChange(obj.value)}
+          className={`
+            px-4 py-2 rounded-xl text-sm font-medium
+            transition-all duration-200
+            ${value === obj.value
+              ? "bg-gradient-purple text-white shadow-lg shadow-purple-500/25 scale-105"
+              : "glass hover:bg-primary/10 hover:scale-105"
+            }
+          `}
         >
-          {type.label}
+          <span className="mr-2">{obj.icon}</span>
+          {obj.label}
         </button>
       ))}
     </div>
   );
 }
-
-export { OBJECTIVE_TYPES };
