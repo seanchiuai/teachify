@@ -15,8 +15,12 @@ interface ParseResult {
 export const parseFile = action({
   args: { storageId: v.id("_storage") },
   handler: async (ctx, args) => {
+    console.log("parseFile called with storageId:", args.storageId);
+
     const blob = await ctx.storage.get(args.storageId);
     if (!blob) throw new Error("File not found in storage. Please try uploading again.");
+
+    console.log("File retrieved, type:", blob.type, "size:", blob.size);
 
     const buffer = Buffer.from(await blob.arrayBuffer());
     const mime = (blob.type || "").toLowerCase();
@@ -27,9 +31,24 @@ export const parseFile = action({
                           buffer.slice(0, 100).toString().toLowerCase().includes("<html");
 
     // --- Shared helpers --------------------------------------------------
+    const withTimeout = <T>(promise: Promise<T>, ms: number, message: string): Promise<T> => {
+      return Promise.race([
+        promise,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error(message)), ms)
+        ),
+      ]);
+    };
+
     const parsePdf = async (pdfBuffer: Buffer) => {
+      console.log("Parsing PDF, buffer size:", pdfBuffer.length);
       const pdfParse = (await import("pdf-parse")).default;
-      const data = await pdfParse(pdfBuffer);
+      const data = await withTimeout(
+        pdfParse(pdfBuffer),
+        30000,
+        "PDF parsing timed out after 30 seconds"
+      );
+      console.log("PDF parsed, text length:", data.text.length);
       return data.text.trim();
     };
 

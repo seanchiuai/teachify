@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { useAction, useMutation } from "convex/react";
+import { useCallback, useState, useRef } from "react";
+import { useAction, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { FileText, Check, Upload, AlertCircle } from "lucide-react";
@@ -59,11 +59,13 @@ export function FileUploadZone({
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const convex = useConvex();
   const parseFile = useAction(api.fileParser.parseFile);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
 
   const handleFile = useCallback(
     async (file: File) => {
+      console.log("handleFile called:", file.name, file.type, file.size);
       setError(null);
 
       if (!isAcceptedFile(file)) {
@@ -75,24 +77,26 @@ export function FileUploadZone({
       setFileName(file.name);
 
       try {
-        const uploadUrl = await generateUploadUrl();
-        const uploadResult = await fetch(uploadUrl, {
-          method: "POST",
-          headers: { "Content-Type": file.type || "application/octet-stream" },
-          body: file,
-        });
-        if (!uploadResult.ok) throw new Error("Upload failed");
+        // Use server-side API route to bypass client WebSocket issues
+        console.log("Uploading via API route...");
+        const formData = new FormData();
+        formData.append("file", file);
 
-        const { storageId } = await uploadResult.json();
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || "Upload failed");
+        }
+
+        const { storageId, content } = await response.json();
+        console.log("Upload complete, storageId:", storageId);
         onFileUploaded(storageId);
 
-        let fileContent = "";
-
-        try {
-          fileContent = (await parseFile({ storageId })) || "";
-        } catch (parseError) {
-          console.error("Server parse failed", parseError);
-        }
+        let fileContent = content || "";
 
         if (!fileContent.trim()) {
           fileContent = await extractPlainTextFallback(file);
@@ -110,7 +114,7 @@ export function FileUploadZone({
         setUploading(false);
       }
     },
-    [generateUploadUrl, onContentExtracted, onFileUploaded, parseFile]
+    [convex, onContentExtracted, onFileUploaded, parseFile]
   );
 
   const handleDrop = useCallback(

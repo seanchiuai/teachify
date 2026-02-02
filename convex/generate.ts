@@ -225,14 +225,40 @@ const gameSpecSchema = {
       properties: {
         hasAvatar: { type: "boolean" as const },
         avatarStyle: { type: "string" as const },
-        startingResources: { type: "object" as const },
+        startingResources: {
+          type: "object" as const,
+          properties: {
+            points: { type: "number" as const },
+            currency: { type: "number" as const },
+            health: { type: "number" as const },
+          },
+        },
         startingHealth: { type: "number" as const },
         maxHealth: { type: "number" as const },
-        abilities: { type: "array" as const, items: { type: "object" as const } },
+        abilities: {
+          type: "array" as const,
+          items: {
+            type: "object" as const,
+            properties: {
+              name: { type: "string" as const },
+              description: { type: "string" as const },
+              effect: { type: "string" as const },
+            },
+            required: ["name", "description"],
+          },
+        },
       },
       required: ["hasAvatar", "avatarStyle", "startingResources", "abilities"],
     },
-    mechanics: { type: "object" as const },
+    mechanics: {
+      type: "object" as const,
+      properties: {
+        movement: { type: "string" as const },
+        interaction: { type: "string" as const },
+        resourceGain: { type: "string" as const },
+        specialRules: { type: "string" as const },
+      },
+    },
     scoring: {
       type: "object" as const,
       properties: {
@@ -248,8 +274,30 @@ const gameSpecSchema = {
       properties: {
         trigger: { type: "string" as const },
         interval: { type: "number" as const },
-        onCorrect: { type: "array" as const, items: { type: "object" as const } },
-        onIncorrect: { type: "array" as const, items: { type: "object" as const } },
+        onCorrect: {
+          type: "array" as const,
+          items: {
+            type: "object" as const,
+            properties: {
+              action: { type: "string" as const },
+              value: { type: "number" as const },
+              target: { type: "string" as const },
+            },
+            required: ["action"],
+          },
+        },
+        onIncorrect: {
+          type: "array" as const,
+          items: {
+            type: "object" as const,
+            properties: {
+              action: { type: "string" as const },
+              value: { type: "number" as const },
+              target: { type: "string" as const },
+            },
+            required: ["action"],
+          },
+        },
         displayStyle: { type: "string" as const },
         allowSkip: { type: "boolean" as const },
       },
@@ -259,7 +307,18 @@ const gameSpecSchema = {
       type: "object" as const,
       properties: {
         type: { type: "string" as const },
-        conditions: { type: "array" as const, items: { type: "object" as const } },
+        conditions: {
+          type: "array" as const,
+          items: {
+            type: "object" as const,
+            properties: {
+              metric: { type: "string" as const },
+              threshold: { type: "number" as const },
+              comparison: { type: "string" as const },
+            },
+            required: ["metric"],
+          },
+        },
         duration: { type: "number" as const },
       },
       required: ["type", "conditions", "duration"],
