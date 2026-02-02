@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useMutation } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { FileText, Check, Upload, AlertCircle } from "lucide-react";
@@ -14,20 +14,41 @@ interface FileUploadZoneProps {
 
 const ACCEPTED_TYPES = [
   "application/pdf",
+  "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-powerpoint",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "application/vnd.apple.pages",
   "application/x-iwork-pages-sffpages",
+  "application/vnd.apple.keynote",
+  "application/x-iwork-keynote-sffkey",
+  "text/plain",
+  "text/rtf",
+  "application/rtf",
 ];
 
-const ACCEPTED_EXTENSIONS = [".pdf", ".pptx", ".docx", ".pages"];
+const ACCEPTED_EXTENSIONS = [
+  ".pdf",
+  ".ppt",
+  ".pptx",
+  ".doc",
+  ".docx",
+  ".pages",
+  ".key",
+  ".txt",
+  ".rtf",
+  ".md",
+];
 
 function isAcceptedFile(file: File): boolean {
   const nameLower = file.name.toLowerCase();
-  const hasAcceptedExt = ACCEPTED_EXTENSIONS.some(ext => nameLower.includes(ext));
-  const validMime = ACCEPTED_TYPES.includes(file.type);
-  const isPagesZip = (file.type === "application/zip" || nameLower.endsWith(".zip")) && nameLower.includes(".pages");
-  return validMime || hasAcceptedExt || isPagesZip;
+  const typeLower = (file.type || "").toLowerCase();
+  const hasAcceptedExt = ACCEPTED_EXTENSIONS.some((ext) => nameLower.endsWith(ext));
+  const validMime = ACCEPTED_TYPES.some((mime) => typeLower === mime || typeLower.startsWith(mime));
+  const isIWorkZip =
+    (typeLower === "application/zip" || nameLower.endsWith(".zip")) &&
+    (nameLower.includes(".pages") || nameLower.includes(".key"));
+  return validMime || hasAcceptedExt || isIWorkZip;
 }
 
 export function FileUploadZone({
@@ -39,6 +60,7 @@ export function FileUploadZone({
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const parseFile = useAction(api.fileParser.parseFile);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
 
   const handleFile = useCallback(
@@ -65,8 +87,23 @@ export function FileUploadZone({
         const { storageId } = await uploadResult.json();
         onFileUploaded(storageId);
 
-        const fileContent = await extractText(file);
-        onContentExtracted(fileContent);
+        let fileContent = "";
+
+        try {
+          fileContent = (await parseFile({ storageId })) || "";
+        } catch (parseError) {
+          console.error("Server parse failed", parseError);
+        }
+
+        if (!fileContent.trim()) {
+          fileContent = await extractPlainTextFallback(file);
+        }
+
+        if (!fileContent.trim()) {
+          throw new Error("We couldn't read any text from that file. Try exporting as PDF or DOCX.");
+        }
+
+        onContentExtracted(fileContent.trim());
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to process file");
         setFileName(null);
@@ -74,7 +111,7 @@ export function FileUploadZone({
         setUploading(false);
       }
     },
-    [generateUploadUrl, onContentExtracted, onFileUploaded]
+    [generateUploadUrl, onContentExtracted, onFileUploaded, parseFile]
   );
 
   const handleDrop = useCallback(
@@ -109,7 +146,7 @@ export function FileUploadZone({
     >
       <input
         type="file"
-        accept=".pdf,.pptx,.docx,.pages,.zip,application/vnd.apple.pages,application/zip"
+        accept=".pdf,.ppt,.pptx,.doc,.docx,.pages,.key,.txt,.rtf,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.apple.pages,application/x-iwork-pages-sffpages,application/vnd.apple.keynote,application/x-iwork-keynote-sffkey,text/plain,application/rtf,text/rtf,application/zip"
         onChange={handleInputChange}
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
       />
@@ -152,8 +189,10 @@ export function FileUploadZone({
             </div>
             <div className="flex justify-center gap-2">
               <Badge variant="blue">PDF</Badge>
-              <Badge variant="yellow">PPTX</Badge>
-              <Badge variant="green">DOCX</Badge>
+              <Badge variant="yellow">PPT/PPTX</Badge>
+              <Badge variant="green">DOC/DOCX</Badge>
+              <Badge variant="purple">Pages/Keynote</Badge>
+              <Badge variant="pink">TXT/RTF</Badge>
             </div>
           </div>
         )}
@@ -169,115 +208,31 @@ export function FileUploadZone({
   );
 }
 
-async function extractText(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer();
+async function extractPlainTextFallback(file: File): Promise<string> {
   const nameLower = file.name.toLowerCase();
+  const typeLower = (file.type || "").toLowerCase();
 
-  const isPagesFile = nameLower.includes(".pages");
-  const isPdfFile = nameLower.endsWith(".pdf") || file.type === "application/pdf";
-  const isDocxFile = nameLower.endsWith(".docx") || file.type.includes("wordprocessingml");
-  const isPptxFile = nameLower.endsWith(".pptx") || file.type.includes("presentationml");
+  const asString = async () => (await file.text()).trim();
 
-  // PDF handling
-  if (isPdfFile) {
-    try {
-      const pdfjsLib = await import("pdfjs-dist");
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
-
-      const loadingTask = pdfjsLib.getDocument({
-        data: new Uint8Array(buffer),
-        useSystemFonts: true,
-      });
-
-      const pdf = await loadingTask.promise;
-      const textParts: string[] = [];
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        const pageText = content.items
-          .map((item) => ("str" in item ? item.str : ""))
-          .join(" ");
-        textParts.push(pageText);
-      }
-
-      return textParts.join("\n\n");
-    } catch (pdfError) {
-      console.error("PDF parsing error:", pdfError);
-      throw new Error("Failed to parse PDF. Please try a different file.");
-    }
+  if (typeLower.startsWith("text/") || nameLower.endsWith(".txt") || nameLower.endsWith(".md")) {
+    return await asString();
   }
 
-  // DOCX handling
-  if (isDocxFile) {
-    const mammoth = await import("mammoth");
-    const result = await mammoth.extractRawText({ arrayBuffer: buffer });
-    return result.value;
+  if (typeLower.includes("rtf") || nameLower.endsWith(".rtf")) {
+    const raw = await asString();
+    return stripRtf(raw);
   }
 
-  // PPTX handling
-  if (isPptxFile) {
-    const JSZip = (await import("jszip")).default;
-    const zip = await JSZip.loadAsync(buffer);
-    const slideTexts: string[] = [];
-    const slideFiles = Object.keys(zip.files).filter(
-      (name) => name.startsWith("ppt/slides/slide") && name.endsWith(".xml")
-    );
-    slideFiles.sort();
-    for (const slidePath of slideFiles) {
-      const xml = await zip.files[slidePath].async("string");
-      const textContent = xml
-        .replace(/<[^>]+>/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-      slideTexts.push(textContent);
-    }
-    return slideTexts.join("\n\n");
-  }
+  return "";
+}
 
-  // Apple Pages handling
-  if (isPagesFile) {
-    const JSZip = (await import("jszip")).default;
-    const zip = await JSZip.loadAsync(buffer);
-    const allPaths = Object.keys(zip.files);
+function stripRtf(raw: string): string {
+  if (!raw.trim().startsWith("{\\rtf")) return raw;
 
-    // Try ALL PDF files in archive
-    const pdfFiles = allPaths.filter(p => p.toLowerCase().endsWith(".pdf") && !zip.files[p].dir);
-    for (const pdfPath of pdfFiles) {
-      try {
-        const pdfBuffer = await zip.files[pdfPath].async("arraybuffer");
-        const pdfjsLib = await import("pdfjs-dist");
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
-        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer) }).promise;
-        const parts: string[] = [];
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          const pageText = content.items.map((item) => ("str" in item ? item.str : "")).join(" ");
-          if (pageText.trim()) parts.push(pageText);
-        }
-        if (parts.length > 0) return parts.join("\n\n");
-      } catch {
-        // Continue to next method
-      }
-    }
-
-    // Try text files
-    const textParts: string[] = [];
-    for (const [path, zipEntry] of Object.entries(zip.files)) {
-      if (path.toLowerCase().endsWith(".txt") && !zipEntry.dir) {
-        try {
-          const content = await zipEntry.async("string");
-          if (content.trim()) textParts.push(content.trim());
-        } catch {
-          // Skip
-        }
-      }
-    }
-    if (textParts.length > 0) return textParts.join("\n\n");
-
-    throw new Error("Could not extract text from .pages file. Try a different file format.");
-  }
-
-  throw new Error("Unsupported file type");
+  let text = raw.replace(/\\par[d]?/g, "\n");
+  text = text.replace(/\\'([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  text = text.replace(/\\[a-zA-Z]+-?\d* ?/g, "");
+  text = text.replace(/[{}]/g, "");
+  text = text.replace(/\n{3,}/g, "\n\n");
+  return text.trim();
 }

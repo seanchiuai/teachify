@@ -219,7 +219,7 @@ export default function LandingPage() {
                   </div>
                   <div className="p-4 bg-paper-50 rounded-xl border-2 border-paper-200">
                     <p className="text-sm font-medium text-paper-700 mb-2">Learning Objective</p>
-                    <p className="text-paper-600">"Students should understand photosynthesis and energy transfer"</p>
+                    <p className="text-paper-600">&ldquo;Students should understand photosynthesis and energy transfer&rdquo;</p>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-paper-500">
                     <div className="w-2 h-2 bg-highlight-green rounded-full animate-pulse" />
@@ -422,7 +422,7 @@ export default function LandingPage() {
                 </div>
                 <div className="p-4 bg-paper-50 rounded-xl border-2 border-paper-200 mb-4">
                   <p className="text-paper-900 font-medium mb-4">
-                    "Why would a plant in a sealed jar eventually die, even with sufficient water?"
+                    &ldquo;Why would a plant in a sealed jar eventually die, even with sufficient water?&rdquo;
                   </p>
                   <div className="space-y-2">
                     {[
@@ -469,7 +469,7 @@ export default function LandingPage() {
             {testimonials.map((t, i) => (
               <Card key={i} variant="default" className="p-6">
                 <Quote className="w-8 h-8 text-paper-300 mb-4" />
-                <p className="text-paper-700 mb-6">"{t.quote}"</p>
+                <p className="text-paper-700 mb-6">&ldquo;{t.quote}&rdquo;</p>
                 <div>
                   <p className="font-semibold text-paper-900">{t.author}</p>
                   <p className="text-sm text-paper-500">{t.role}</p>
@@ -499,7 +499,7 @@ export default function LandingPage() {
               },
               {
                 q: "What file types can I upload?",
-                a: "We support PDFs, PowerPoint (.pptx), Word documents (.docx), and Apple Pages files. You can also paste plain text directly."
+                a: "We support PDFs, PowerPoint (.ppt/.pptx), Word documents (.doc/.docx), Apple Pages & Keynote files, plus plain text/RTF. You can also paste text directly."
               },
               {
                 q: "How many students can join a game?",

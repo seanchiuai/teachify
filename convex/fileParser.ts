@@ -30,22 +30,70 @@ export const parseFile = action({
       return result.value.trim();
     };
 
+    const parsePlain = (buf: Buffer) => buf.toString("utf8").trim();
+
+    const stripRtf = (raw: string) => {
+      if (!raw.trim().startsWith("{\\rtf")) return raw.trim();
+      let text = raw.replace(/\\par[d]?/g, "\n");
+      text = text.replace(/\\'([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+      text = text.replace(/\\[a-zA-Z]+-?\\d* ?/g, "");
+      text = text.replace(/[{}]/g, "");
+      text = text.replace(/\n{3,}/g, "\n\n");
+      return text.trim();
+    };
+
+    const normalizeText = (text: string) => text.replace(/\s+/g, " ").trim();
+
+    const filterMeaningfulStrings = (parts: string[]) => {
+      const seen = new Set<string>();
+      return parts
+        .map((p) => normalizeText(p))
+        .filter((p) => {
+          if (!p || seen.has(p)) return false;
+          seen.add(p);
+          const wordCount = p.split(/\s+/).length;
+          const alphaRatio = (p.match(/[a-zA-Z]/g)?.length || 0) / p.length;
+          const hasSentencePunc = /[.?!]/.test(p);
+          const hasSpace = p.includes(" ");
+          const hasLower = /[a-z]/.test(p);
+          const looksLikeStyle = /^[A-Za-z0-9._-]+$/.test(p);
+          return (
+            p.length >= 25 &&
+            wordCount >= 5 &&
+            alphaRatio >= 0.55 &&
+            hasSpace &&
+            hasLower &&
+            !looksLikeStyle &&
+            (hasSentencePunc || wordCount >= 8)
+          );
+        });
+    };
+
+    const extractTextFromXml = (xml: string) => {
+      const withoutTags = xml.replace(/<[^>]+>/g, " ");
+      return normalizeText(
+        withoutTags
+          .replace(/&amp;/g, "&")
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&quot;/g, "\"")
+          .replace(/&#39;/g, "'")
+      );
+    };
+
     const parsePptx = async (pptBuffer: Buffer, zipFromCaller?: any) => {
       const JSZip = (await import("jszip")).default;
       const zip = zipFromCaller ?? (await JSZip.loadAsync(pptBuffer));
       const texts: string[] = [];
 
       for (const [path, file] of Object.entries(zip.files)) {
-        if (path.startsWith("ppt/slides/slide") && path.endsWith(".xml")) {
-          const content = await (file as { async: (type: string) => Promise<string> }).async("text");
-          const matches = content.match(/<a:t[^>]*>([^<]*)<\/a:t>/g);
-          if (matches) {
-            texts.push(matches.map((m: string) => m.replace(/<\/?a:t[^>]*>/g, "")).join(" "));
-          }
-        }
+        if (!path.startsWith("ppt/") || !path.endsWith(".xml")) continue;
+        const content = await (file as { async: (type: string) => Promise<string> }).async("text");
+        const cleaned = extractTextFromXml(content);
+        if (cleaned) texts.push(cleaned);
       }
 
-      return texts.join("\n\n").trim();
+      return normalizeText(texts.join(" "));
     };
 
     const extractProtobufText = (data: Uint8Array) => {
@@ -66,19 +114,6 @@ export const parseFile = action({
       return cleaned.trim();
     };
 
-    const extractSentences = (text: string) => {
-      const sentences = text.split(/(?<=[.!?])\s+/);
-      return sentences.filter((s) => {
-        if (s.length < 30) return false;
-        const words = s.split(/\s+/);
-        if (words.length < 5) return false;
-        const alphaCount = (s.match(/[a-zA-Z\s]/g) || []).length;
-        if (alphaCount / s.length < 0.85) return false;
-        if (!s.match(/^[A-Z]/)) return false;
-        return true;
-      });
-    };
-
     const parseIWork = async (zip: any) => {
       const paths = Object.keys(zip.files);
 
@@ -88,7 +123,7 @@ export const parseFile = action({
         try {
           const pdfBuffer = await zip.files[pdfPath].async("nodebuffer");
           const text = await parsePdf(pdfBuffer);
-          if (text) return text;
+          if (text && text.length > 30) return text;
         } catch {
           // try next candidate
         }
@@ -100,24 +135,59 @@ export const parseFile = action({
         try {
           const JSZip = (await import("jszip")).default;
           const innerZip = await JSZip.loadAsync(await zip.files[indexZipPath].async("nodebuffer"));
+          const innerPdf = Object.keys(innerZip.files).find(
+            (p) => p.toLowerCase().endsWith(".pdf") && !innerZip.files[p].dir
+          );
+          if (innerPdf) {
+            try {
+              const pdfBuffer = await innerZip.files[innerPdf].async("nodebuffer");
+              const text = await parsePdf(pdfBuffer);
+              if (text && text.length > 30) return text;
+            } catch {
+              // continue to iwa parsing
+            }
+          }
           const iwaFiles = Object.keys(innerZip.files)
             .filter((p) => p.toLowerCase().endsWith(".iwa"))
             .sort((a, b) => (a.toLowerCase().includes("document") ? -1 : b.toLowerCase().includes("document") ? 1 : 0));
 
-          let combined = "";
+          const strings: string[] = [];
+          const { parseIwa } = await import("keynote-parser2");
+
+          const visit = (val: any) => {
+            if (!val) return;
+            if (typeof val === "string") {
+              const normalized = normalizeText(val);
+              if (normalized.length > 0) strings.push(normalized);
+              return;
+            }
+            if (Array.isArray(val)) {
+              val.forEach(visit);
+              return;
+            }
+            if (typeof val === "object") {
+              for (const v of Object.values(val)) visit(v);
+            }
+          };
+
           for (const iwaPath of iwaFiles) {
             try {
               const data = await innerZip.files[iwaPath].async("uint8array");
-              const text = extractProtobufText(data);
-              if (text.length > 0) combined += text + " ";
+              try {
+                const parsed = parseIwa(Buffer.from(data));
+                visit(parsed);
+              } catch {
+                const fallback = extractProtobufText(data);
+                if (fallback.length > 0) strings.push(fallback);
+              }
             } catch {
               // ignore and continue
             }
           }
 
-          const sentences = extractSentences(combined);
-          if (sentences.length > 0) return sentences.join(" ");
-          if (combined.trim().length > 80) return combined.trim();
+          const filtered = filterMeaningfulStrings(strings);
+          const merged = normalizeText(filtered.join(" "));
+          if (merged.length > 0) return merged;
         } catch {
           // fallback to other methods
         }
@@ -161,6 +231,14 @@ export const parseFile = action({
 
     if (mime.includes("presentationml")) {
       return await parsePptx(buffer);
+    }
+
+    if (mime.includes("rtf")) {
+      return stripRtf(parsePlain(buffer));
+    }
+
+    if (mime.startsWith("text/")) {
+      return parsePlain(buffer);
     }
 
     if (

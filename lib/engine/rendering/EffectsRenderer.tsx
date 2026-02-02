@@ -53,7 +53,7 @@ export function EffectsRenderer({
     if (newEffects.length > 0) {
       setVisualEffects(prev => [...prev, ...newEffects]);
     }
-  }, [events, theme, cellSize]);
+  }, [events, theme, cellSize, visualEffects]);
 
   // Clean up expired effects
   useEffect(() => {
