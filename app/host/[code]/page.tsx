@@ -3,40 +3,61 @@
 import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Users, Play, BarChart3, Trophy, Lightbulb, AlertTriangle, ArrowRight, Flag, Check, TrendingUp, Gamepad2, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { GameCode } from "@/components/ui/game-code";
+import { isEngineGame } from "@/lib/engine";
 
 export default function HostPage() {
   const { code } = useParams<{ code: string }>();
   const game = useQuery(api.games.getByCode, { code: code ?? "" });
   const players = useQuery(api.players.listByGame, game ? { gameId: game._id } : "skip");
   const leaderboard = useQuery(api.players.leaderboard, game ? { gameId: game._id } : "skip");
+
+  const gamePhase = game?.engineMode ? (game.phase || "lobby") : game?.state;
+
   const questionStats = useQuery(
     api.answers.questionStats,
-    game && game.state !== "lobby" ? { gameId: game._id, questionIndex: game.currentQuestion } : "skip"
+    game && gamePhase !== "lobby" ? { gameId: game._id, questionIndex: game.currentQuestion } : "skip"
   );
   const gameAnalytics = useQuery(
     api.answers.gameAnalytics,
-    game && game.state === "complete" ? { gameId: game._id } : "skip"
+    game && gamePhase === "complete" ? { gameId: game._id } : "skip"
   );
 
+  // Legacy mutations
   const startGame = useMutation(api.games.startGame);
   const showResults = useMutation(api.games.showResults);
   const nextQuestion = useMutation(api.games.nextQuestion);
 
+  // Engine mutations
+  const startEngineGame = useMutation(api.gameActions.startEngineGame);
+  const triggerEngineQuestion = useMutation(api.gameActions.triggerEngineQuestion);
+  const showEngineResults = useMutation(api.gameActions.showEngineResults);
+  const nextEngineQuestion = useMutation(api.gameActions.nextEngineQuestion);
+
+  const isEngine = isEngineGame(game);
+  const gameSpec = game?.gameSpec;
+
   if (game === undefined) {
     return (
-      <main className="min-h-screen bg-gradient-main flex items-center justify-center">
-        <div className="animate-spin h-10 w-10 border-3 border-primary border-t-transparent rounded-full" />
+      <main className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-bounce-subtle">
+          <div className="w-12 h-12 border-4 border-paper-300 border-t-highlight-yellow rounded-full animate-spin" />
+        </div>
       </main>
     );
   }
 
   if (game === null) {
     return (
-      <main className="min-h-screen bg-gradient-main flex items-center justify-center">
-        <div className="text-center glass p-8 rounded-2xl animate-scale-in">
-          <h1 className="text-2xl font-bold text-destructive mb-2">Game Not Found</h1>
-          <p className="text-muted-foreground">Code: {code}</p>
-        </div>
+      <main className="min-h-screen bg-background flex items-center justify-center">
+        <Card variant="pink" className="p-8 text-center animate-scale-in">
+          <h1 className="text-2xl font-bold text-red-700 mb-2">Game Not Found</h1>
+          <p className="text-paper-500">Code: {code}</p>
+        </Card>
       </main>
     );
   }
@@ -45,145 +66,208 @@ export default function HostPage() {
   const isLastQuestion = game.currentQuestion >= game.questions.length - 1;
 
   return (
-    <main className="min-h-screen bg-gradient-main relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0 bg-gradient-radial pointer-events-none" />
-      <div className="absolute top-10 right-10 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl animate-float" />
-      <div className="absolute bottom-10 left-10 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }} />
-
-      <div className="relative max-w-5xl mx-auto py-8 px-4">
+    <main className="min-h-screen bg-background">
+      <div className="container-paper-lg py-8">
         {/* Header with Game Code */}
         <div className="text-center mb-10 animate-slide-up">
-          <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wider">Game Code</p>
-          <h1 className="game-code">{game.code}</h1>
-          <p className="text-muted-foreground mt-4">
-            Students join at <span className="text-primary font-semibold">/play</span>
+          <p className="text-sm font-medium text-paper-500 mb-3 uppercase tracking-wider">Game Code</p>
+          <GameCode code={game.code} size="lg" />
+          <p className="text-paper-500 mt-4">
+            Students join at <span className="font-semibold text-highlight-purple">/play</span>
           </p>
         </div>
 
         {/* LOBBY STATE */}
-        {game.state === "lobby" && (
+        {gamePhase === "lobby" && (
           <>
-            <div className="glass-strong p-8 rounded-3xl mb-8 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            <Card variant="elevated" className="p-8 mb-8 animate-slide-up stagger-1">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                  <span>👥</span> Players ({players?.length || 0})
+                <h2 className="text-xl font-bold flex items-center gap-2 text-paper-900">
+                  <Users className="w-5 h-5" /> Players ({players?.length || 0})
                 </h2>
-                <span className={`text-sm px-4 py-2 rounded-full ${
-                  players?.length === 0 
-                    ? "bg-accent/20 text-accent" 
-                    : "bg-green-500/20 text-green-400"
-                }`}>
-                  {players?.length === 0 ? "Waiting for players..." : "Ready to start!"}
-                </span>
+                <Badge variant={players?.length === 0 ? "yellow" : "green"}>
+                  {players?.length === 0 ? "Waiting..." : "Ready!"}
+                </Badge>
               </div>
               <div className="flex flex-wrap gap-3">
                 {players?.map((p, i) => (
-                  <span 
-                    key={p._id} 
-                    className="player-badge animate-scale-in"
-                    style={{ animationDelay: `${i * 0.1}s` }}
+                  <span
+                    key={p._id}
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-paper-100 border border-paper-200 text-paper-700 animate-deal"
+                    style={{ animationDelay: `${i * 50}ms` }}
                   >
                     {p.name}
                   </span>
                 ))}
                 {players?.length === 0 && (
-                  <p className="text-muted-foreground text-center w-full py-8">
+                  <p className="text-paper-400 text-center w-full py-8">
                     Waiting for the first player to join...
                   </p>
                 )}
               </div>
-            </div>
+            </Card>
 
-            <button
-              onClick={() => startGame({ gameId: game._id })}
+            {/* Engine Game Info */}
+            {isEngine && gameSpec && (
+              <Card variant="default" className="p-6 mb-8 animate-slide-up stagger-2 border-l-4 border-l-highlight-purple">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-highlight-purple/20 flex items-center justify-center">
+                    <Gamepad2 className="w-6 h-6 text-highlight-purple" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-paper-900">{gameSpec.title}</h3>
+                    <p className="text-sm text-paper-500">{gameSpec.narrative}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-3 bg-paper-50 rounded-xl border border-paper-200 text-center">
+                    <p className="text-xs text-paper-400 mb-1">Genre</p>
+                    <p className="font-medium text-paper-900 capitalize">{gameSpec.genre}</p>
+                  </div>
+                  <div className="p-3 bg-paper-50 rounded-xl border border-paper-200 text-center">
+                    <p className="text-xs text-paper-400 mb-1">Theme</p>
+                    <p className="font-medium text-paper-900 capitalize">{gameSpec.theme?.style}</p>
+                  </div>
+                  <div className="p-3 bg-paper-50 rounded-xl border border-paper-200 text-center">
+                    <p className="text-xs text-paper-400 mb-1">Questions</p>
+                    <p className="font-medium text-paper-900">{game.questions.length}</p>
+                  </div>
+                  <div className="p-3 bg-paper-50 rounded-xl border border-paper-200 text-center">
+                    <p className="text-xs text-paper-400 mb-1">Duration</p>
+                    <p className="font-medium text-paper-900">{Math.ceil((gameSpec.victory?.duration || 600) / 60)} min</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 mt-4 text-sm text-highlight-purple font-medium">
+                  <Sparkles className="w-4 h-4" />
+                  <span>AI-Generated Composable Game</span>
+                </div>
+              </Card>
+            )}
+
+            <Button
+              onClick={() => isEngine
+                ? startEngineGame({ gameId: game._id })
+                : startGame({ gameId: game._id })
+              }
               disabled={!players || players.length === 0}
-              className="w-full btn-success text-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 animate-slide-up"
-              style={{ animationDelay: '0.2s' }}
+              variant="green"
+              size="lg"
+              className="w-full animate-slide-up stagger-3"
             >
-              🎮 Start Game
-            </button>
+              <Play className="w-5 h-5" /> Start Game
+            </Button>
           </>
         )}
 
-        {/* QUESTION STATE */}
-        {game.state === "question" && (
-          <>
-            <div className="grid gap-4 md:grid-cols-3 mb-8">
-              <div className="stat-card animate-slide-up" style={{ animationDelay: '0.1s' }}>
-                <p className="text-sm text-muted-foreground mb-2">Question</p>
-                <p className="text-4xl font-bold text-gradient">
-                  {game.currentQuestion + 1} / {game.questions.length}
-                </p>
-              </div>
-              <div className="stat-card border-l-secondary animate-slide-up" style={{ animationDelay: '0.15s' }}>
-                <p className="text-sm text-muted-foreground mb-2">Responses</p>
-                <p className="text-4xl font-bold">
-                  {questionStats?.total || 0} / {players?.length || 0}
-                </p>
-              </div>
-              <div className="stat-card border-l-accent animate-slide-up" style={{ animationDelay: '0.2s' }}>
-                <p className="text-sm text-muted-foreground mb-2">Correct</p>
-                <p className="text-4xl font-bold text-gradient-accent">{questionStats?.percentCorrect || 0}%</p>
+        {/* COUNTDOWN STATE (Engine only) */}
+        {gamePhase === "countdown" && (
+          <div className="text-center animate-slide-up">
+            <h2 className="text-5xl font-bold mb-4 text-paper-900 font-display">Get Ready!</h2>
+            <p className="text-xl text-paper-500 mb-8">Game starting soon...</p>
+            <div className="flex justify-center">
+              <div className="flex space-x-3">
+                <div className="w-4 h-4 bg-highlight-yellow rounded-full animate-bounce-subtle" />
+                <div className="w-4 h-4 bg-highlight-yellow rounded-full animate-bounce-subtle" style={{ animationDelay: '0.1s' }} />
+                <div className="w-4 h-4 bg-highlight-yellow rounded-full animate-bounce-subtle" style={{ animationDelay: '0.2s' }} />
               </div>
             </div>
+            <Button
+              onClick={() => triggerEngineQuestion({ gameId: game._id, questionIndex: 0 })}
+              variant="yellow"
+              size="lg"
+              className="mt-8"
+            >
+              <Play className="w-5 h-5" /> Start First Question
+            </Button>
+          </div>
+        )}
 
-            <div className="glass-strong p-8 rounded-3xl mb-8 animate-slide-up" style={{ animationDelay: '0.25s' }}>
-              <p className="text-sm text-muted-foreground mb-3">Current Question</p>
-              <p className="text-xl font-semibold mb-6">{currentQuestion?.question}</p>
-              <div className="grid gap-3">
+        {/* QUESTION STATE */}
+        {gamePhase === "question" && (
+          <>
+            <div className="grid gap-4 md:grid-cols-3 mb-8">
+              <Card variant="yellow" className="p-6 text-center animate-slide-up stagger-1">
+                <p className="text-sm text-paper-500 mb-2">Question</p>
+                <p className="text-4xl font-bold text-paper-900 font-display">
+                  {game.currentQuestion + 1} / {game.questions.length}
+                </p>
+              </Card>
+              <Card variant="default" className="p-6 text-center animate-slide-up stagger-2">
+                <p className="text-sm text-paper-500 mb-2">Responses</p>
+                <p className="text-4xl font-bold text-paper-900 font-display">
+                  {questionStats?.total || 0} / {players?.length || 0}
+                </p>
+              </Card>
+              <Card variant="green" className="p-6 text-center animate-slide-up stagger-3">
+                <p className="text-sm text-paper-500 mb-2">Correct</p>
+                <p className="text-4xl font-bold text-green-700 font-display">
+                  {questionStats?.percentCorrect || 0}%
+                </p>
+              </Card>
+            </div>
+
+            <Card variant="elevated" className="p-8 mb-8 animate-slide-up stagger-4">
+              <p className="text-sm text-paper-500 mb-3">Current Question</p>
+              <p className="text-xl font-semibold text-paper-900 mb-6">{currentQuestion?.question}</p>
+              <div className="space-y-3">
                 {currentQuestion?.options.map((opt: string, i: number) => (
                   <div
                     key={i}
-                    className={`p-4 rounded-xl text-sm transition-all ${
+                    className={`p-4 rounded-xl text-sm border-2 transition-all ${
                       opt === currentQuestion.correct
-                        ? "bg-green-500/20 border border-green-500/40"
-                        : "bg-muted/30"
+                        ? "bg-highlight-green/20 border-highlight-green"
+                        : "bg-paper-50 border-paper-200"
                     }`}
                   >
-                    <span className="mr-3 font-bold text-muted-foreground">{String.fromCharCode(65 + i)}.</span>
-                    {opt}
+                    <span className="mr-3 font-bold text-paper-400">{String.fromCharCode(65 + i)}.</span>
+                    <span className="text-paper-700">{opt}</span>
                     {opt === currentQuestion.correct && (
-                      <span className="ml-3 text-green-400">✓</span>
+                      <Check className="inline-block ml-3 w-4 h-4 text-green-600" />
                     )}
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
 
-            <button
-              onClick={() => showResults({ gameId: game._id })}
-              className="w-full btn-primary text-lg animate-slide-up"
-              style={{ animationDelay: '0.3s' }}
+            <Button
+              onClick={() => isEngine
+                ? showEngineResults({ gameId: game._id })
+                : showResults({ gameId: game._id })
+              }
+              variant="yellow"
+              size="lg"
+              className="w-full animate-slide-up stagger-5"
             >
-              📊 Show Results
-            </button>
+              <BarChart3 className="w-5 h-5" /> Show Results
+            </Button>
           </>
         )}
 
         {/* RESULTS STATE */}
-        {game.state === "results" && (
+        {gamePhase === "results" && (
           <>
             <div className="grid gap-4 md:grid-cols-3 mb-8">
-              <div className="stat-card animate-slide-up">
-                <p className="text-sm text-muted-foreground mb-2">Question</p>
-                <p className="text-3xl font-bold">
+              <Card variant="default" className="p-6 text-center animate-slide-up stagger-1">
+                <p className="text-sm text-paper-500 mb-2">Question</p>
+                <p className="text-3xl font-bold text-paper-900 font-display">
                   {game.currentQuestion + 1} / {game.questions.length}
                 </p>
-              </div>
-              <div className="stat-card border-l-secondary animate-slide-up" style={{ animationDelay: '0.05s' }}>
-                <p className="text-sm text-muted-foreground mb-2">Responses</p>
-                <p className="text-3xl font-bold">{questionStats?.total || 0}</p>
-              </div>
-              <div className="stat-card border-l-green-500 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-                <p className="text-sm text-muted-foreground mb-2">Correct</p>
-                <p className="text-3xl font-bold text-green-400">{questionStats?.percentCorrect || 0}%</p>
-              </div>
+              </Card>
+              <Card variant="default" className="p-6 text-center animate-slide-up stagger-2">
+                <p className="text-sm text-paper-500 mb-2">Responses</p>
+                <p className="text-3xl font-bold text-paper-900 font-display">{questionStats?.total || 0}</p>
+              </Card>
+              <Card variant="green" className="p-6 text-center animate-slide-up stagger-3">
+                <p className="text-sm text-paper-500 mb-2">Correct</p>
+                <p className="text-3xl font-bold text-green-700 font-display">{questionStats?.percentCorrect || 0}%</p>
+              </Card>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 mb-8">
-              <div className="glass-strong p-6 rounded-2xl animate-slide-up" style={{ animationDelay: '0.15s' }}>
-                <h3 className="font-bold mb-4 flex items-center gap-2">📊 Answer Distribution</h3>
+              <Card variant="elevated" className="p-6 animate-slide-up stagger-4">
+                <h3 className="font-bold mb-4 flex items-center gap-2 text-paper-900">
+                  <BarChart3 className="w-5 h-5" /> Answer Distribution
+                </h3>
                 <div className="space-y-3">
                   {currentQuestion?.options.map((opt: string) => {
                     const count = questionStats?.distribution[opt] || 0;
@@ -195,16 +279,16 @@ export default function HostPage() {
                       <div key={opt} className="relative">
                         <div
                           className={`absolute inset-0 rounded-lg ${
-                            isCorrect ? "bg-green-500/30" : "bg-muted/40"
+                            isCorrect ? "bg-highlight-green/40" : "bg-paper-100"
                           }`}
                           style={{ width: `${percent}%` }}
                         />
                         <div className="relative flex items-center justify-between p-3">
-                          <span className={`text-sm ${isCorrect ? "font-semibold" : ""}`}>
+                          <span className={`text-sm ${isCorrect ? "font-semibold text-paper-900" : "text-paper-600"}`}>
                             {opt.length > 35 ? opt.substring(0, 35) + "..." : opt}
-                            {isCorrect && <span className="ml-2 text-green-400">✓</span>}
+                            {isCorrect && <Check className="inline-block ml-2 w-4 h-4 text-green-600" />}
                           </span>
-                          <span className="text-sm font-mono">
+                          <span className="text-sm font-mono text-paper-500">
                             {count} ({percent}%)
                           </span>
                         </div>
@@ -212,13 +296,15 @@ export default function HostPage() {
                     );
                   })}
                 </div>
-              </div>
+              </Card>
 
-              <div className="glass-strong p-6 rounded-2xl animate-slide-up" style={{ animationDelay: '0.2s' }}>
-                <h3 className="font-bold mb-4 flex items-center gap-2">🏆 Leaderboard</h3>
+              <Card variant="elevated" className="p-6 animate-slide-up stagger-5">
+                <h3 className="font-bold mb-4 flex items-center gap-2 text-paper-900">
+                  <Trophy className="w-5 h-5" /> Leaderboard
+                </h3>
                 <div className="space-y-2">
                   {leaderboard?.slice(0, 8).map((p, i) => (
-                    <div key={p._id} className="flex items-center justify-between p-3 bg-muted/20 rounded-xl">
+                    <div key={p._id} className="flex items-center justify-between p-3 bg-paper-50 rounded-xl border border-paper-200">
                       <div className="flex items-center gap-3">
                         <span
                           className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold text-white ${
@@ -228,135 +314,157 @@ export default function HostPage() {
                                 ? "rank-silver"
                                 : i === 2
                                   ? "rank-bronze"
-                                  : "bg-muted"
+                                  : "bg-paper-300 text-paper-600"
                           }`}
                         >
                           {i + 1}
                         </span>
-                        <span>{p.name}</span>
+                        <span className="text-paper-700">{p.name}</span>
                       </div>
-                      <span className="font-mono font-bold">{p.score}</span>
+                      <span className="font-mono font-bold text-paper-900">{p.score}</span>
                     </div>
                   ))}
                 </div>
-              </div>
+              </Card>
             </div>
 
-            <div className="glass p-6 rounded-2xl mb-8 animate-slide-up" style={{ animationDelay: '0.25s' }}>
-              <p className="text-sm text-muted-foreground mb-2">💡 Explanation</p>
-              <p className="text-sm">{currentQuestion?.explanation}</p>
+            <Card variant="default" className="p-6 mb-8 animate-slide-up stagger-6">
+              <div className="flex items-center gap-2 mb-2 text-paper-500">
+                <Lightbulb className="w-4 h-4" />
+                <span className="text-sm font-medium">Explanation</span>
+              </div>
+              <p className="text-sm text-paper-700">{currentQuestion?.explanation}</p>
               {currentQuestion?.misconception && (
                 <>
-                  <p className="text-sm text-muted-foreground mt-4 mb-2">⚠️ Common Misconception</p>
-                  <p className="text-sm text-accent">{currentQuestion.misconception}</p>
+                  <div className="flex items-center gap-2 mt-4 mb-2 text-highlight-orange">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span className="text-sm font-medium">Common Misconception</span>
+                  </div>
+                  <p className="text-sm text-paper-600">{currentQuestion.misconception}</p>
                 </>
               )}
-            </div>
+            </Card>
 
-            <button
-              onClick={() => nextQuestion({ gameId: game._id })}
-              className="w-full btn-primary text-lg animate-slide-up"
-              style={{ animationDelay: '0.3s' }}
+            <Button
+              onClick={() => isEngine
+                ? nextEngineQuestion({ gameId: game._id })
+                : nextQuestion({ gameId: game._id })
+              }
+              variant={isLastQuestion ? "yellow" : "green"}
+              size="lg"
+              className="w-full animate-slide-up stagger-6"
             >
-              {isLastQuestion ? "🏁 End Game" : "➡️ Next Question"}
-            </button>
+              {isLastQuestion ? (
+                <>
+                  <Flag className="w-5 h-5" /> End Game
+                </>
+              ) : (
+                <>
+                  Next Question <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </Button>
           </>
         )}
 
         {/* COMPLETE STATE */}
-        {game.state === "complete" && (
+        {gamePhase === "complete" && (
           <>
             <div className="text-center mb-10 animate-slide-up">
-              <h2 className="text-4xl font-black mb-2">🎉 Game Complete!</h2>
-              <p className="text-muted-foreground">Final Results & Analytics</p>
+              <h2 className="text-4xl font-bold mb-2 text-paper-900 font-display">
+                Game Complete!
+              </h2>
+              <p className="text-paper-500">Final Results & Analytics</p>
             </div>
 
             {gameAnalytics && (
               <div className="grid gap-4 md:grid-cols-4 mb-8">
-                <div className="stat-card animate-slide-up">
-                  <p className="text-sm text-muted-foreground mb-2">Overall Score</p>
-                  <p className={`text-3xl font-bold ${
-                    gameAnalytics.overallPercent >= 70 
-                      ? "text-green-400" 
-                      : gameAnalytics.overallPercent >= 50 
-                        ? "text-accent" 
-                        : "text-destructive"
+                <Card variant="default" className="p-6 text-center animate-slide-up stagger-1">
+                  <p className="text-sm text-paper-500 mb-2">Overall Score</p>
+                  <p className={`text-3xl font-bold font-display ${
+                    gameAnalytics.overallPercent >= 70
+                      ? "text-green-600"
+                      : gameAnalytics.overallPercent >= 50
+                        ? "text-highlight-orange"
+                        : "text-red-600"
                   }`}>
                     {gameAnalytics.overallPercent}%
                   </p>
-                </div>
-                <div className="stat-card border-l-secondary animate-slide-up" style={{ animationDelay: '0.05s' }}>
-                  <p className="text-sm text-muted-foreground mb-2">Players</p>
-                  <p className="text-3xl font-bold">{gameAnalytics.totalPlayers}</p>
-                </div>
-                <div className="stat-card border-l-accent animate-slide-up" style={{ animationDelay: '0.1s' }}>
-                  <p className="text-sm text-muted-foreground mb-2">Questions</p>
-                  <p className="text-3xl font-bold">{gameAnalytics.questionCount}</p>
-                </div>
-                <div className="stat-card border-l-green-500 animate-slide-up" style={{ animationDelay: '0.15s' }}>
-                  <p className="text-sm text-muted-foreground mb-2">Correct</p>
-                  <p className="text-3xl font-bold">{gameAnalytics.totalCorrect}/{gameAnalytics.totalAnswers}</p>
-                </div>
+                </Card>
+                <Card variant="default" className="p-6 text-center animate-slide-up stagger-2">
+                  <p className="text-sm text-paper-500 mb-2">Players</p>
+                  <p className="text-3xl font-bold text-paper-900 font-display">{gameAnalytics.totalPlayers}</p>
+                </Card>
+                <Card variant="default" className="p-6 text-center animate-slide-up stagger-3">
+                  <p className="text-sm text-paper-500 mb-2">Questions</p>
+                  <p className="text-3xl font-bold text-paper-900 font-display">{gameAnalytics.questionCount}</p>
+                </Card>
+                <Card variant="green" className="p-6 text-center animate-slide-up stagger-4">
+                  <p className="text-sm text-paper-500 mb-2">Correct</p>
+                  <p className="text-3xl font-bold text-green-700 font-display">{gameAnalytics.totalCorrect}/{gameAnalytics.totalAnswers}</p>
+                </Card>
               </div>
             )}
 
             {gameAnalytics && gameAnalytics.comprehensionGaps.length > 0 && (
-              <div className="glass-strong p-6 rounded-2xl border-l-4 border-l-accent mb-8 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-                <h3 className="font-bold mb-4 flex items-center gap-2">
-                  <span className="text-accent">⚠️</span> Comprehension Gaps
+              <Card variant="pink" className="p-6 mb-8 animate-slide-up stagger-5">
+                <h3 className="font-bold mb-4 flex items-center gap-2 text-red-700">
+                  <AlertTriangle className="w-5 h-5" /> Comprehension Gaps
                 </h3>
                 <div className="space-y-4">
                   {gameAnalytics.comprehensionGaps.map((gap) => (
-                    <div key={gap.questionIndex} className="p-4 bg-background/50 rounded-xl">
+                    <div key={gap.questionIndex} className="p-4 bg-paper-50 rounded-xl border border-paper-200">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
-                          <p className="text-sm text-muted-foreground mb-1">Question {gap.questionIndex + 1}</p>
-                          <p className="font-medium">{gap.question}</p>
+                          <p className="text-sm text-paper-400 mb-1">Question {gap.questionIndex + 1}</p>
+                          <p className="font-medium text-paper-900">{gap.question}</p>
                           {gap.misconception && (
-                            <p className="text-sm text-accent mt-2">
+                            <p className="text-sm text-paper-600 mt-2">
                               <span className="font-medium">Misconception:</span> {gap.misconception}
                             </p>
                           )}
                         </div>
-                        <span className="text-destructive font-bold text-xl">{gap.percentCorrect}%</span>
+                        <span className="text-red-600 font-bold text-xl">{gap.percentCorrect}%</span>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
+              </Card>
             )}
 
             {gameAnalytics && (
-              <div className="glass-strong p-6 rounded-2xl mb-8 animate-slide-up" style={{ animationDelay: '0.25s' }}>
-                <h3 className="font-bold mb-4">📈 Per-Question Breakdown</h3>
+              <Card variant="elevated" className="p-6 mb-8 animate-slide-up stagger-6">
+                <h3 className="font-bold mb-4 flex items-center gap-2 text-paper-900">
+                  <TrendingUp className="w-5 h-5" /> Per-Question Breakdown
+                </h3>
                 <div className="space-y-3">
                   {gameAnalytics.questionStats.map((q) => (
                     <div key={q.questionIndex} className="relative">
                       <div
                         className={`absolute inset-0 rounded-lg ${
-                          q.percentCorrect >= 70 
-                            ? "bg-green-500/20" 
-                            : q.percentCorrect >= 50 
-                              ? "bg-yellow-500/20" 
-                              : "bg-red-500/20"
+                          q.percentCorrect >= 70
+                            ? "bg-highlight-green/30"
+                            : q.percentCorrect >= 50
+                              ? "bg-highlight-yellow/30"
+                              : "bg-highlight-pink/30"
                         }`}
                         style={{ width: `${q.percentCorrect}%` }}
                       />
                       <div className="relative flex items-center justify-between p-3">
                         <div className="flex items-center gap-3">
-                          <span className="font-mono text-sm text-muted-foreground w-8">Q{q.questionIndex + 1}</span>
-                          <span className="text-sm truncate max-w-[300px]">
+                          <span className="font-mono text-sm text-paper-400 w-8">Q{q.questionIndex + 1}</span>
+                          <span className="text-sm truncate max-w-[300px] text-paper-700">
                             {q.question.length > 45 ? q.question.slice(0, 45) + "..." : q.question}
                           </span>
                         </div>
                         <div className="flex items-center gap-4">
-                          <span className="text-sm text-muted-foreground">{q.correctCount}/{q.total}</span>
-                          <span className={`font-bold w-12 text-right ${
-                            q.percentCorrect >= 70 
-                              ? "text-green-400" 
-                              : q.percentCorrect >= 50 
-                                ? "text-accent" 
-                                : "text-destructive"
+                          <span className="text-sm text-paper-400">{q.correctCount}/{q.total}</span>
+                          <span className={`font-bold w-12 text-right font-display ${
+                            q.percentCorrect >= 70
+                              ? "text-green-600"
+                              : q.percentCorrect >= 50
+                                ? "text-highlight-orange"
+                                : "text-red-600"
                           }`}>
                             {q.percentCorrect}%
                           </span>
@@ -365,23 +473,25 @@ export default function HostPage() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </Card>
             )}
 
-            <div className="glass-strong p-8 rounded-3xl animate-slide-up" style={{ animationDelay: '0.3s' }}>
-              <h3 className="font-bold mb-6 text-center text-2xl">🏆 Final Leaderboard</h3>
+            <Card variant="yellow" className="p-8 animate-slide-up stagger-6">
+              <h3 className="font-bold mb-6 text-center text-2xl flex items-center justify-center gap-2 text-paper-900">
+                <Trophy className="w-6 h-6" /> Final Leaderboard
+              </h3>
               <div className="space-y-3 max-w-md mx-auto">
                 {leaderboard?.map((p, i) => (
                   <div
                     key={p._id}
-                    className={`flex items-center justify-between p-4 rounded-xl ${
+                    className={`flex items-center justify-between p-4 rounded-xl border-2 ${
                       i === 0
-                        ? "bg-yellow-500/20 border-2 border-yellow-500/50"
+                        ? "bg-highlight-yellow/20 border-highlight-yellow"
                         : i === 1
-                          ? "bg-gray-400/20 border-2 border-gray-400/50"
+                          ? "bg-paper-200 border-paper-300"
                           : i === 2
-                            ? "bg-amber-700/20 border-2 border-amber-700/50"
-                            : "bg-muted/30"
+                            ? "bg-orange-100 border-orange-300"
+                            : "bg-paper-50 border-paper-200"
                     }`}
                   >
                     <div className="flex items-center gap-4">
@@ -393,18 +503,18 @@ export default function HostPage() {
                               ? "rank-silver"
                               : i === 2
                                 ? "rank-bronze"
-                                : "bg-muted"
+                                : "bg-paper-300 text-paper-600"
                         }`}
                       >
                         {i + 1}
                       </span>
-                      <span className="text-lg font-medium">{p.name}</span>
+                      <span className="text-lg font-medium text-paper-900">{p.name}</span>
                     </div>
-                    <span className="text-2xl font-mono font-bold">{p.score}</span>
+                    <span className="text-2xl font-mono font-bold text-paper-900">{p.score}</span>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
           </>
         )}
       </div>

@@ -2,77 +2,75 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========================================
+   TACTICAL PAPER DESIGN SYSTEM
+   A unique, gradient-free UI identity for LessonPlay
+   ======================================== */
+
 @layer base {
   :root {
-    /* Premium dark theme palette */
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    /* Paper Tones - Warm, tactile backgrounds */
+    --paper-50: 48 33% 98%;
+    --paper-100: 43 23% 95%;
+    --paper-200: 40 15% 90%;
+    --paper-300: 42 10% 80%;
+    --paper-400: 40 8% 58%;
+    --paper-500: 42 10% 40%;
+    --paper-600: 40 12% 28%;
+    --paper-900: 40 15% 10%;
 
-    --card: 222 47% 14%;
-    --card-foreground: 210 40% 98%;
+    /* Highlighters - Vibrant accent colors */
+    --highlight-yellow: 45 100% 65%;
+    --highlight-pink: 4 100% 75%;
+    --highlight-green: 140 60% 63%;
+    --highlight-blue: 207 90% 67%;
+    --highlight-purple: 291 50% 60%;
+    --highlight-orange: 32 100% 65%;
 
-    --popover: 222 47% 14%;
-    --popover-foreground: 210 40% 98%;
+    /* Semantic Colors */
+    --background: var(--paper-50);
+    --foreground: var(--paper-900);
+    --card: var(--paper-100);
+    --card-foreground: var(--paper-900);
+    --popover: var(--paper-100);
+    --popover-foreground: var(--paper-900);
+    --primary: var(--highlight-yellow);
+    --primary-foreground: var(--paper-900);
+    --secondary: var(--paper-200);
+    --secondary-foreground: var(--paper-600);
+    --muted: var(--paper-200);
+    --muted-foreground: var(--paper-400);
+    --accent: var(--highlight-blue);
+    --accent-foreground: var(--paper-900);
+    --destructive: var(--highlight-pink);
+    --destructive-foreground: var(--paper-900);
+    --border: var(--paper-300);
+    --input: var(--paper-300);
+    --ring: var(--highlight-blue);
+    --radius: 8px;
 
-    --primary: 263 70% 58%;
-    --primary-foreground: 0 0% 100%;
+    /* Game-specific semantic colors */
+    --success: var(--highlight-green);
+    --warning: var(--highlight-yellow);
+    --info: var(--highlight-blue);
 
-    --secondary: 162 72% 45%;
-    --secondary-foreground: 0 0% 100%;
+    /* Shadow System - Hard offset shadows (paper stack effect) */
+    --shadow-color: var(--paper-300);
+    --shadow-sm: 2px 2px 0 hsl(var(--shadow-color));
+    --shadow-md: 4px 4px 0 hsl(var(--shadow-color));
+    --shadow-lg: 6px 6px 0 hsl(var(--shadow-color));
+    --shadow-xl: 8px 8px 0 hsl(var(--shadow-color));
 
-    --muted: 217 33% 20%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 38 92% 55%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 217 33% 25%;
-    --input: 217 33% 22%;
-    --ring: 263 70% 58%;
-
-    --radius: 0.75rem;
-
-    /* Game-specific colors */
-    --success: 162 72% 45%;
-    --warning: 38 92% 55%;
-    --info: 199 89% 48%;
-
-    /* Gradient colors */
-    --gradient-start: 263 70% 58%;
-    --gradient-end: 238 84% 67%;
-  }
-
-  .light {
-    --background: 0 0% 98%;
-    --foreground: 222 47% 11%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-
-    --primary: 263 70% 58%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 162 72% 45%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
-
-    --accent: 38 92% 55%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 263 70% 58%;
+    /* Spacing */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-7: 48px;
+    --space-8: 64px;
+    --space-9: 96px;
   }
 }
 
@@ -80,58 +78,84 @@
   * {
     @apply border-border;
   }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
   body {
     @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Focus visible styles - clear, accessible */
+  :focus-visible {
+    outline: 3px solid hsl(var(--highlight-blue));
+    outline-offset: 2px;
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
-/* Animation Keyframes */
-@keyframes gradient-shift {
-  0%,
-  100% {
-    background-position: 0% 50%;
+/* ========================================
+   ANIMATION KEYFRAMES
+   ======================================== */
+
+@keyframes stamp {
+  0% { transform: translate(-2px, -2px); }
+  50% { transform: translate(1px, 1px); }
+  100% { transform: translate(0, 0); }
+}
+
+@keyframes deal {
+  0% { 
+    opacity: 0; 
+    transform: translateY(-20px) rotate(-3deg); 
   }
-  50% {
-    background-position: 100% 50%;
+  100% { 
+    opacity: 1; 
+    transform: translateY(0) rotate(0); 
   }
 }
 
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px);
+@keyframes stamp-approve {
+  0% { 
+    transform: scale(1.5); 
+    opacity: 0; 
   }
-  50% {
-    transform: translateY(-10px);
+  50% { 
+    transform: scale(0.9); 
+    opacity: 1; 
   }
-}
-
-@keyframes pulse-glow {
-  0%,
-  100% {
-    box-shadow: 0 0 20px rgba(124, 58, 237, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(124, 58, 237, 0.6);
+  100% { 
+    transform: scale(1); 
+    opacity: 1; 
   }
 }
 
-@keyframes bounce-subtle {
-  0%,
+@keyframes score-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+@keyframes slide-up {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
   100% {
     transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
+    opacity: 1;
   }
 }
 
@@ -146,194 +170,468 @@
   }
 }
 
-@keyframes slide-up {
-  0% {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  100% {
+@keyframes bounce-subtle {
+  0%, 100% {
     transform: translateY(0);
-    opacity: 1;
+  }
+  50% {
+    transform: translateY(-5px);
   }
 }
 
+@keyframes underline-slide {
+  0% {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  100% {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
 @layer utilities {
-  /* Gradient Backgrounds */
-  .bg-gradient-main {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--background)) 0%,
-      hsl(222 47% 8%) 50%,
-      hsl(250 47% 12%) 100%
-    );
+  /* Typography */
+  .font-display {
+    font-family: var(--font-space-grotesk), system-ui, sans-serif;
   }
 
-  .bg-gradient-radial {
-    background: radial-gradient(
-      ellipse at top,
-      hsl(263 70% 20% / 0.3) 0%,
-      transparent 50%
-    );
+  .font-mono {
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
   }
 
-  .bg-gradient-purple {
-    background: linear-gradient(
-      135deg,
-      hsl(263 70% 58%) 0%,
-      hsl(238 84% 67%) 100%
-    );
+  /* Text utilities */
+  .text-balance {
+    text-wrap: balance;
   }
 
-  .bg-gradient-success {
-    background: linear-gradient(
-      135deg,
-      hsl(162 72% 45%) 0%,
-      hsl(168 72% 40%) 100%
-    );
+  /* ========================================
+     BUTTON STYLES - "Stamp" Buttons
+     ======================================== */
+  
+  .btn-base {
+    @apply inline-flex items-center justify-center gap-2 font-semibold uppercase tracking-wider text-sm;
+    @apply border-2 border-solid rounded-lg;
+    @apply transition-all duration-150 ease-out;
+    @apply px-6 py-4;
+    box-shadow: var(--shadow-md);
   }
 
-  .bg-gradient-accent {
-    background: linear-gradient(
-      135deg,
-      hsl(38 92% 55%) 0%,
-      hsl(48 92% 50%) 100%
-    );
+  .btn-base:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-lg);
   }
 
-  /* Glass Effect */
-  .glass {
-    @apply bg-card/50 backdrop-blur-xl border border-white/10;
+  .btn-base:active {
+    transform: translate(2px, 2px);
+    box-shadow: none;
   }
 
-  .glass-strong {
-    @apply bg-card/70 backdrop-blur-2xl border border-white/15;
+  .btn-base:disabled {
+    @apply opacity-50 cursor-not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 
-  /* Gradient Text */
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400;
+  /* Stamp variants */
+  .btn-stamp-yellow {
+    @apply btn-base;
+    background: hsl(var(--highlight-yellow));
+    border-color: hsl(var(--paper-900));
+    color: hsl(var(--paper-900));
   }
 
-  .text-gradient-accent {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-orange-400;
+  .btn-stamp-pink {
+    @apply btn-base;
+    background: hsl(var(--highlight-pink));
+    border-color: hsl(var(--paper-900));
+    color: hsl(var(--paper-900));
   }
 
-  /* Animations */
-  .animate-gradient {
-    animation: gradient-shift 8s ease infinite;
-    background-size: 200% 200%;
+  .btn-stamp-green {
+    @apply btn-base;
+    background: hsl(var(--highlight-green));
+    border-color: hsl(var(--paper-900));
+    color: hsl(var(--paper-900));
   }
 
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
+  .btn-stamp-blue {
+    @apply btn-base;
+    background: hsl(var(--highlight-blue));
+    border-color: hsl(var(--paper-900));
+    color: hsl(var(--paper-900));
   }
 
-  .animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
+  .btn-stamp-purple {
+    @apply btn-base;
+    background: hsl(var(--highlight-purple));
+    border-color: hsl(var(--paper-900));
+    color: white;
+  }
+
+  .btn-stamp-outline {
+    @apply btn-base;
+    background: transparent;
+    border-color: hsl(var(--paper-300));
+    color: hsl(var(--paper-600));
+    box-shadow: none;
+  }
+
+  .btn-stamp-outline:hover {
+    background: hsl(var(--paper-100));
+    box-shadow: none;
+  }
+
+  .btn-stamp-white {
+    @apply btn-base;
+    background: white;
+    border-color: hsl(var(--paper-300));
+    color: hsl(var(--paper-900));
+  }
+
+  /* Small stamp */
+  .btn-stamp-sm {
+    @apply px-4 py-2 text-xs;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .btn-stamp-sm:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Large stamp */
+  .btn-stamp-lg {
+    @apply px-8 py-5 text-base;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .btn-stamp-lg:hover {
+    box-shadow: var(--shadow-xl);
+  }
+
+  /* ========================================
+     CARD STYLES - "Index Card" Aesthetic
+     ======================================== */
+  
+  .card-index {
+    @apply bg-card border-2 border-solid rounded-xl;
+    border-color: hsl(var(--paper-300));
+    box-shadow: var(--shadow-sm);
+    transition: all 150ms ease;
+  }
+
+  .card-index:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .card-elevated {
+    @apply card-index;
+    box-shadow: var(--shadow-md);
+  }
+
+  .card-elevated:hover {
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Card with thick border accent */
+  .card-accent-yellow {
+    @apply card-index;
+    border-color: hsl(var(--highlight-yellow));
+    border-width: 3px;
+  }
+
+  .card-accent-green {
+    @apply card-index;
+    border-color: hsl(var(--highlight-green));
+    border-width: 3px;
+  }
+
+  .card-accent-pink {
+    @apply card-index;
+    border-color: hsl(var(--highlight-pink));
+    border-width: 3px;
+  }
+
+  .card-accent-blue {
+    @apply card-index;
+    border-color: hsl(var(--highlight-blue));
+    border-width: 3px;
+  }
+
+  /* ========================================
+     INPUT STYLES
+     ======================================== */
+  
+  .input-paper {
+    @apply w-full bg-background border-2 border-solid rounded-lg px-4 py-3;
+    border-color: hsl(var(--paper-300));
+    transition: all 150ms ease;
+  }
+
+  .input-paper:focus {
+    @apply outline-none;
+    border-color: hsl(var(--highlight-blue));
+    background: white;
+  }
+
+  .input-paper::placeholder {
+    color: hsl(var(--paper-400));
+  }
+
+  /* Game code input - individual boxes */
+  .input-code-box {
+    @apply w-12 h-14 text-center text-2xl font-mono font-bold bg-background border-2 border-solid rounded-lg;
+    border-color: hsl(var(--paper-300));
+    transition: all 150ms ease;
+  }
+
+  .input-code-box:focus {
+    @apply outline-none;
+    border-color: hsl(var(--highlight-yellow));
+    background: hsl(var(--highlight-yellow) / 0.1);
+    transform: scale(1.05);
+  }
+
+  /* ========================================
+     BADGE/TAG STYLES
+     ======================================== */
+  
+  .badge {
+    @apply inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded;
+    border: 1px solid currentColor;
+  }
+
+  .badge-yellow {
+    @apply badge;
+    background: hsl(var(--highlight-yellow) / 0.2);
+    color: hsl(var(--paper-900));
+    border-color: hsl(var(--highlight-yellow));
+  }
+
+  .badge-green {
+    @apply badge;
+    background: hsl(var(--highlight-green) / 0.2);
+    color: hsl(140 60% 30%);
+    border-color: hsl(var(--highlight-green));
+  }
+
+  .badge-pink {
+    @apply badge;
+    background: hsl(var(--highlight-pink) / 0.2);
+    color: hsl(4 70% 40%);
+    border-color: hsl(var(--highlight-pink));
+  }
+
+  .badge-blue {
+    @apply badge;
+    background: hsl(var(--highlight-blue) / 0.2);
+    color: hsl(207 70% 35%);
+    border-color: hsl(var(--highlight-blue));
+  }
+
+  .badge-muted {
+    @apply badge;
+    background: hsl(var(--paper-200));
+    color: hsl(var(--paper-500));
+    border-color: hsl(var(--paper-300));
+  }
+
+  /* ========================================
+     GAME CODE DISPLAY
+     ======================================== */
+  
+  .game-code-display {
+    @apply font-mono font-bold tracking-wider;
+    font-size: 3rem;
+    line-height: 1;
+  }
+
+  .game-code-letter {
+    @apply inline-flex items-center justify-center w-14 h-16 bg-background border-2 border-solid rounded-lg;
+    border-color: hsl(var(--paper-300));
+    box-shadow: var(--shadow-sm);
+  }
+
+  .game-code-letter:nth-child(odd) {
+    transform: rotate(-1deg);
+  }
+
+  .game-code-letter:nth-child(even) {
+    transform: rotate(1deg);
+  }
+
+  /* ========================================
+     LEADERBOARD & RANKING
+     ======================================== */
+  
+  .rank-badge {
+    @apply w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold;
+  }
+
+  .rank-gold {
+    @apply rank-badge;
+    background: hsl(var(--highlight-yellow));
+    color: hsl(var(--paper-900));
+    border: 2px solid hsl(var(--paper-900));
+  }
+
+  .rank-silver {
+    @apply rank-badge;
+    background: hsl(var(--paper-300));
+    color: hsl(var(--paper-900));
+    border: 2px solid hsl(var(--paper-900));
+  }
+
+  .rank-bronze {
+    @apply rank-badge;
+    background: hsl(25 60% 55%);
+    color: white;
+    border: 2px solid hsl(var(--paper-900));
+  }
+
+  /* ========================================
+     ANIMATION UTILITIES
+     ======================================== */
+  
+  .animate-deal {
+    animation: deal 400ms ease-out forwards;
+  }
+
+  .animate-stamp {
+    animation: stamp 200ms ease-out;
+  }
+
+  .animate-stamp-approve {
+    animation: stamp-approve 300ms ease-out forwards;
+  }
+
+  .animate-score-pop {
+    animation: score-pop 300ms ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 400ms ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 300ms ease-out forwards;
   }
 
   .animate-bounce-subtle {
     animation: bounce-subtle 2s ease-in-out infinite;
   }
 
-  .animate-shimmer {
-    animation: shimmer 3s linear infinite;
-    background-size: 200% 100%;
+  /* Stagger delays */
+  .stagger-1 { animation-delay: 50ms; }
+  .stagger-2 { animation-delay: 100ms; }
+  .stagger-3 { animation-delay: 150ms; }
+  .stagger-4 { animation-delay: 200ms; }
+  .stagger-5 { animation-delay: 250ms; }
+  .stagger-6 { animation-delay: 300ms; }
+
+  /* ========================================
+     LAYOUT UTILITIES
+     ======================================== */
+  
+  .container-paper {
+    @apply w-full max-w-2xl mx-auto px-4;
   }
 
-  .animate-scale-in {
-    animation: scale-in 0.3s ease-out forwards;
+  .container-paper-lg {
+    @apply w-full max-w-4xl mx-auto px-4;
   }
 
-  .animate-slide-up {
-    animation: slide-up 0.4s ease-out forwards;
+  .section-padding {
+    @apply py-8 md:py-12;
   }
 
-  /* Glow Effects */
-  .glow-primary {
-    box-shadow:
-      0 0 30px rgba(124, 58, 237, 0.3),
-      0 0 60px rgba(124, 58, 237, 0.1);
+  /* ========================================
+     DIVIDERS
+     ======================================== */
+  
+  .divider-paper {
+    @apply h-px w-full;
+    background: repeating-linear-gradient(
+      to right,
+      hsl(var(--paper-300)),
+      hsl(var(--paper-300)) 8px,
+      transparent 8px,
+      transparent 16px
+    );
   }
 
-  .glow-success {
-    box-shadow:
-      0 0 30px rgba(16, 185, 129, 0.3),
-      0 0 60px rgba(16, 185, 129, 0.1);
+  /* ========================================
+     STATUS INDICATORS
+     ======================================== */
+  
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
   }
 
-  .glow-accent {
-    box-shadow:
-      0 0 30px rgba(245, 158, 11, 0.3),
-      0 0 60px rgba(245, 158, 11, 0.1);
+  .status-success {
+    @apply status-dot;
+    background: hsl(var(--highlight-green));
   }
 
-  /* Card Styles */
-  .card-hover {
-    @apply transition-all duration-300;
+  .status-warning {
+    @apply status-dot;
+    background: hsl(var(--highlight-yellow));
   }
 
-  .card-hover:hover {
-    @apply -translate-y-1;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  .status-error {
+    @apply status-dot;
+    background: hsl(var(--highlight-pink));
   }
 
-  /* Button Styles */
-  .btn-primary {
-    @apply bg-gradient-purple text-white font-bold rounded-xl py-4 px-6;
-    @apply hover:opacity-90 hover:scale-[1.02] active:scale-[0.98];
-    @apply transition-all duration-200;
-    @apply shadow-lg shadow-purple-500/25;
+  /* ========================================
+     SELECTION CARDS (for objective types, etc)
+     ======================================== */
+  
+  .selectable-card {
+    @apply card-index cursor-pointer p-4;
   }
 
-  .btn-success {
-    @apply bg-gradient-success text-white font-bold rounded-xl py-4 px-6;
-    @apply hover:opacity-90 hover:scale-[1.02] active:scale-[0.98];
-    @apply transition-all duration-200;
-    @apply shadow-lg shadow-emerald-500/25;
+  .selectable-card[data-selected="true"] {
+    @apply card-accent-yellow;
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-md);
   }
 
-  .btn-accent {
-    @apply bg-gradient-accent text-white font-bold rounded-xl py-4 px-6;
-    @apply hover:opacity-90 hover:scale-[1.02] active:scale-[0.98];
-    @apply transition-all duration-200;
-    @apply shadow-lg shadow-amber-500/25;
+  /* ========================================
+     UPLOAD ZONE
+     ======================================== */
+  
+  .upload-zone {
+    @apply relative border-2 border-dashed border-border rounded-xl p-8 text-center transition-all duration-200 cursor-pointer;
+    background: hsl(var(--paper-100));
   }
 
-  /* Input Styles */
-  .input-glass {
-    @apply glass rounded-xl px-4 py-3;
-    @apply focus:outline-none focus:ring-2 focus:ring-primary/50;
-    @apply transition-all duration-200;
+  .upload-zone:hover {
+    border-color: hsl(var(--highlight-yellow));
+    background: hsl(var(--highlight-yellow) / 0.05);
   }
 
-  /* Stats Card */
-  .stat-card {
-    @apply glass rounded-2xl p-6 text-center;
-    @apply border-l-4 border-l-primary;
+  .upload-zone[data-active="true"] {
+    border-color: hsl(var(--highlight-yellow));
+    border-style: solid;
+    background: hsl(var(--highlight-yellow) / 0.1);
   }
 
-  /* Game Code Display */
-  .game-code {
-    @apply text-6xl md:text-8xl font-mono font-bold tracking-[0.2em];
-    @apply text-gradient animate-pulse-glow;
+  /* ========================================
+     PROGRESS BAR
+     ======================================== */
+  
+  .progress-paper {
+    @apply w-full h-3 bg-muted rounded-full overflow-hidden;
   }
 
-  /* Player Badge */
-  .player-badge {
-    @apply px-4 py-2 rounded-full text-sm font-medium;
-    @apply bg-gradient-to-r from-primary/20 to-secondary/20;
-    @apply border border-white/10;
-  }
-
-  /* Leaderboard Position */
-  .rank-gold {
-    @apply bg-gradient-to-r from-yellow-400 to-amber-500;
-  }
-  .rank-silver {
-    @apply bg-gradient-to-r from-gray-300 to-gray-400;
-  }
-  .rank-bronze {
-    @apply bg-gradient-to-r from-amber-600 to-amber-700;
+  .progress-paper-fill {
+    @apply h-full rounded-full transition-all duration-300;
+    background: hsl(var(--highlight-yellow));
   }
 }
