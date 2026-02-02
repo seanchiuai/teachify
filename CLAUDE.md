@@ -59,7 +59,7 @@ Implementation patterns live in `.claude/skills/`:
 - `convex/` — Convex schema, queries, mutations, real-time subscriptions
 - `gemini-ai/` — Gemini API integration, prompt engineering, structured output
 - `game-engine/` — Game state machine, lobby, question flow
-- `file-upload/` — File parsing (PDF, PPTX, DOCX), Convex storage
+- `file-upload/` — File parsing (PDF, PPTX, DOCX, Pages), Convex storage
 - `ui-components/` — shadcn/ui patterns, game UI, responsive layouts
 
 Use `/create-skill` to add new skills as needed.
