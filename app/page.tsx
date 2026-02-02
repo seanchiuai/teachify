@@ -180,10 +180,12 @@ export default function LandingPage() {
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
-                <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                  <Play className="w-5 h-5 mr-2" />
-                  See How It Works
-                </Button>
+                <Link href="/promo.mp4" target="_blank">
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                    <Play className="w-5 h-5 mr-2" />
+                    See How It Works
+                  </Button>
+                </Link>
               </div>
               <div className="flex items-center gap-6 justify-center lg:justify-start mt-8 text-sm text-paper-500">
                 <div className="flex items-center gap-2">

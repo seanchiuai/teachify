@@ -1,0 +1,23 @@
+{
+  "name": "lessonplay-video",
+  "version": "1.0.0",
+  "description": "LessonPlay promotional video",
+  "scripts": {
+    "start": "npx remotion studio src/index.tsx",
+    "build": "npx remotion render src/index.tsx LessonPlayPromo out/lessonplay-promo-4k.mp4 --codec h264 --crf 18",
+    "build:1080p": "npx remotion render src/index.tsx LessonPlayPromo out/lessonplay-promo-1080p.mp4 --scale 0.5 --codec h264 --crf 18",
+    "preview": "npx remotion preview src/index.tsx"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@remotion/cli": "^4.0.417",
+    "@remotion/player": "^4.0.417",
+    "@types/react": "^19.2.10",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "remotion": "^4.0.417",
+    "typescript": "^5.9.3"
+  }
+}

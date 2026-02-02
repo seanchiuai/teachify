@@ -20,37 +20,27 @@ npm run lint       # Linting
 
 ## Development Phases
 
-| Phase | Focus | User Stories |
-|-------|-------|--------------|
-| 1 | Project Setup & Upload | US-001, US-002 |
-| 2 | AI Question Generation | US-003 |
-| 3 | Real-time Game Engine | US-004, US-005, US-006 |
-| 4 | Game UI & Leaderboard | US-007, US-008 |
-| 5 | Polish & Demo Prep | All |
+| Phase | Focus | User Stories | Status |
+|-------|-------|--------------|--------|
+| 1 | Project Setup & Upload | US-001, US-002 | ✅ |
+| 2 | AI Question Generation | US-003 | ✅ |
+| 3 | Real-time Game Engine | US-004, US-005, US-006 | ✅ |
+| 4 | Game UI & Leaderboard | US-007, US-008 | ✅ |
+| 5 | Polish & Demo Prep | All | ✅ |
 
-**Current phase:** `docs/development-progress.yaml`
+**Status:** All phases complete. See `docs/development-progress.yaml` for details.
 
-## Ralph Loop Workflow
+## Development Workflow
 
-Each phase runs as one Ralph loop. Prompts live in `prompts/`. Run `/ralph-loop:help` before creating new prompts.
+**For new features:**
+1. Read relevant skill docs in `.claude/skills/*/`
+2. Check `docs/PRD.md` for acceptance criteria
+3. Build → Test → Commit
 
-Per iteration:
-
-**Read:**
-1. `docs/PRD.md` → Acceptance criteria for phase's user stories
-2. `.claude/skills/*/SKILL.md` → Overview, when to use
-3. `.claude/skills/*/reference.md` → Code patterns, API examples
-4. `docs/design.md` → UI specs (if building UI)
-
-**Build → Test → Commit:**
-- Build feature
-- Test with agent-browser (mandatory)
-- Commit only if tests pass
-
-**After phase complete:**
-1. Check off `[x]` in PRD.md acceptance criteria
-2. Move tasks to "Complete" in TASKS.md
-3. Human confirms → Update `development-progress.yaml`
+**Key docs:**
+- `docs/PRD.md` — Product requirements, acceptance criteria
+- `docs/design.md` — UI specifications
+- `docs/development-progress.yaml` — Phase history
 
 ## Skills
 
@@ -78,6 +68,5 @@ GEMINI_API_KEY=...
 - Test every change before committing
 - Commit after every small change
 - Sacrifice grammar for conciseness
-- Only work on current phase
 
 **Never:** Skip tests. Store secrets outside `.gitignore`.
