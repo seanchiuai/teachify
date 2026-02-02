@@ -1,17 +1,17 @@
 ---
 name: file-upload
-description: File upload, parsing (PDF, PPTX, DOCX), and Convex storage for lesson materials
+description: File upload, parsing (PDF, PPTX, DOCX, ODT, HTML, MD), and Convex storage for lesson materials
 ---
 
 # File Upload
 
-Handles uploading lesson materials and extracting text content for AI processing. Supports PDF, PPTX, DOCX file uploads via drag-and-drop, plus direct text paste as a fallback.
+Handles uploading lesson materials and extracting text content for AI processing. Supports multiple file formats via drag-and-drop, plus direct text paste as a fallback.
 
 ## Overview
 
 - **Upload**: Drag-and-drop or click to select files
 - **Storage**: Files stored in Convex file storage via presigned URL pattern
-- **Parsing**: Extract text from PDF, PPTX, DOCX in a Convex action
+- **Parsing**: Extract text from various formats in a Convex action with image preservation
 - **Fallback**: Text paste/type for when file upload isn't needed
 
 ## When to Use This Skill
@@ -25,12 +25,16 @@ Handles uploading lesson materials and extracting text content for AI processing
 
 ### Supported Formats
 
-| Format | Extension | Parsing Library |
-|--------|-----------|----------------|
-| PDF | .pdf | `pdf-parse` |
-| PowerPoint | .pptx | `jszip` (extract XML text) |
-| Word | .docx | `mammoth` |
-| Plain text | .txt | N/A (direct read) |
+| Format | Extension | Parsing Library | Notes |
+|--------|-----------|-----------------|-------|
+| PDF | .pdf | `pdf-parse` | Text extraction |
+| Word | .docx | `mammoth` | HTML + images as base64 |
+| PowerPoint | .pptx | `jszip` | XML text extraction |
+| OpenDocument | .odt | `officeparser` | Full AST parsing |
+| HTML | .html, .htm | Built-in | Sanitized, scripts removed |
+| Markdown | .md | Built-in | Converted to HTML |
+| Plain text | .txt | N/A | Direct read |
+| RTF | .rtf | Built-in | Formatting stripped |
 
 ### Upload Flow (Convex 3-Step Pattern)
 

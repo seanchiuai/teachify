@@ -5,17 +5,26 @@ import { v } from "convex/values";
 
 type ZipObject = import("jszip").JSZipObject;
 
+// Result type that includes both text and HTML with images
+interface ParseResult {
+  text: string;
+  html?: string;
+  images?: Array<{ id: string; contentType: string; data: string }>;
+}
+
 export const parseFile = action({
   args: { storageId: v.id("_storage") },
   handler: async (ctx, args) => {
     const blob = await ctx.storage.get(args.storageId);
-    if (!blob) throw new Error("File not found");
+    if (!blob) throw new Error("File not found in storage. Please try uploading again.");
 
     const buffer = Buffer.from(await blob.arrayBuffer());
     const mime = (blob.type || "").toLowerCase();
 
     const looksLikePdf = buffer.slice(0, 4).toString() === "%PDF";
     const isZipMagic = buffer[0] === 0x50 && buffer[1] === 0x4b;
+    const looksLikeHtml = buffer.slice(0, 100).toString().toLowerCase().includes("<!doctype html") ||
+                          buffer.slice(0, 100).toString().toLowerCase().includes("<html");
 
     // --- Shared helpers --------------------------------------------------
     const parsePdf = async (pdfBuffer: Buffer) => {
@@ -24,10 +33,126 @@ export const parseFile = action({
       return data.text.trim();
     };
 
-    const parseDocx = async (docBuffer: Buffer) => {
+    // Enhanced DOCX parsing with HTML output and embedded images
+    const parseDocx = async (docBuffer: Buffer): Promise<ParseResult> => {
       const mammoth = (await import("mammoth")).default;
-      const result = await mammoth.extractRawText({ buffer: docBuffer });
-      return result.value.trim();
+      const images: Array<{ id: string; contentType: string; data: string }> = [];
+      let imageIndex = 0;
+
+      // Custom image converter to embed images as base64 data URIs
+      const imageConverter = mammoth.images.imgElement((image: any) => {
+        return image.readAsBase64String().then((imageBuffer: string) => {
+          const id = `img-${imageIndex++}`;
+          images.push({
+            id,
+            contentType: image.contentType,
+            data: imageBuffer,
+          });
+          return {
+            src: `data:${image.contentType};base64,${imageBuffer}`,
+            alt: `Image ${imageIndex}`,
+          };
+        });
+      });
+
+      // Get HTML with images
+      const htmlResult = await mammoth.convertToHtml(
+        { buffer: docBuffer },
+        { convertImage: imageConverter }
+      );
+
+      // Also get raw text for AI processing
+      const textResult = await mammoth.extractRawText({ buffer: docBuffer });
+
+      return {
+        text: textResult.value.trim(),
+        html: htmlResult.value.trim(),
+        images: images.length > 0 ? images : undefined,
+      };
+    };
+
+    // ODT parsing using officeparser
+    const parseOdt = async (odtBuffer: Buffer): Promise<string> => {
+      const { OfficeParser } = await import("officeparser");
+      const ast = await OfficeParser.parseOffice(odtBuffer);
+      return ast.toText().trim();
+    };
+
+    // HTML file sanitization - removes scripts but preserves structure
+    const parseHtml = (htmlBuffer: Buffer): ParseResult => {
+      let html = htmlBuffer.toString("utf8");
+
+      // Remove script tags and their content
+      html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+
+      // Remove onclick, onerror, onload and other event handlers
+      html = html.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, "");
+      html = html.replace(/\s+on\w+\s*=\s*[^\s>]+/gi, "");
+
+      // Remove javascript: URLs
+      html = html.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, 'href="#"');
+
+      // Remove style tags (optional - keeps structure cleaner)
+      html = html.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
+
+      // Extract text content for AI processing
+      const textOnly = html
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      return {
+        text: textOnly,
+        html: html.trim(),
+      };
+    };
+
+    // Markdown to HTML conversion
+    const parseMarkdown = (mdBuffer: Buffer): ParseResult => {
+      const md = mdBuffer.toString("utf8");
+
+      // Simple markdown to HTML conversion
+      let html = md
+        // Headers
+        .replace(/^######\s+(.*)$/gm, "<h6>$1</h6>")
+        .replace(/^#####\s+(.*)$/gm, "<h5>$1</h5>")
+        .replace(/^####\s+(.*)$/gm, "<h4>$1</h4>")
+        .replace(/^###\s+(.*)$/gm, "<h3>$1</h3>")
+        .replace(/^##\s+(.*)$/gm, "<h2>$1</h2>")
+        .replace(/^#\s+(.*)$/gm, "<h1>$1</h1>")
+        // Bold and italic
+        .replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>")
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*(.+?)\*/g, "<em>$1</em>")
+        .replace(/___(.+?)___/g, "<strong><em>$1</em></strong>")
+        .replace(/__(.+?)__/g, "<strong>$1</strong>")
+        .replace(/_(.+?)_/g, "<em>$1</em>")
+        // Code blocks
+        .replace(/```(\w*)\n([\s\S]*?)```/g, "<pre><code>$2</code></pre>")
+        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        // Lists (simple)
+        .replace(/^\*\s+(.*)$/gm, "<li>$1</li>")
+        .replace(/^-\s+(.*)$/gm, "<li>$1</li>")
+        .replace(/^\d+\.\s+(.*)$/gm, "<li>$1</li>")
+        // Links
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+        // Images
+        .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">')
+        // Paragraphs (lines not already tagged)
+        .replace(/^(?!<[hluop]|<li|<pre|<code)(.+)$/gm, "<p>$1</p>")
+        // Clean up empty paragraphs
+        .replace(/<p>\s*<\/p>/g, "");
+
+      return {
+        text: md.trim(),
+        html: html.trim(),
+      };
     };
 
     const parsePlain = (buf: Buffer) => buf.toString("utf8").trim();
@@ -114,162 +239,160 @@ export const parseFile = action({
       return cleaned.trim();
     };
 
-    const parseIWork = async (zip: any) => {
-      const paths = Object.keys(zip.files);
+    // Clean iWork protobuf text by removing styling garbage
+    const cleanIWorkText = (text: string): string => {
+      // Known font names and style markers to remove
+      const noisePatterns = [
+        /TimesNewRomanPS(MT)?/gi,
+        /ArialMT?/gi,
+        /Helvetica/gi,
+        /CourierNew/gi,
+        /\b(header|footer|label|body|cell|row|column|style|Level\d+|Row|Column)\w*\b/gi,
+        /\b(Mf|BY|Bz|Yr|FV|BD|XN|MB|fY|pA|Ae|EY|VZ|ZW)\b/g,
+        /\bfffj\b/gi,
+        /\b[A-Z][a-z]?[A-Z][a-z]?\b/g, // CamelCase fragments like "Highb", "Lowb"
+        /\b[vrnijzfx]{1,3}\b/gi, // Random single/double letters
+        /\s[A-Za-z]{1,2}\s/g, // Single/double letter words
+        /[^a-zA-Z0-9\s.,!?'-]/g, // Non-text characters
+      ];
 
-      // 1) Prefer embedded/previews as PDF (most reliable text)
-      const pdfPaths = paths.filter((p) => p.toLowerCase().endsWith(".pdf") && !zip.files[p].dir);
-      for (const pdfPath of pdfPaths) {
-        try {
-          const pdfBuffer = await zip.files[pdfPath].async("nodebuffer");
-          const text = await parsePdf(pdfBuffer);
-          if (text && text.length > 30) return text;
-        } catch {
-          // try next candidate
-        }
+      let cleaned = text;
+      for (const pattern of noisePatterns) {
+        cleaned = cleaned.replace(pattern, " ");
       }
 
-      // 2) Newer iWork files bundle Index.zip containing .iwa protobufs
-      const indexZipPath = paths.find((p) => p.toLowerCase().endsWith("index.zip"));
-      if (indexZipPath) {
-        try {
-          const JSZip = (await import("jszip")).default;
-          const innerZip = await JSZip.loadAsync(await zip.files[indexZipPath].async("nodebuffer"));
-          const innerPdf = Object.keys(innerZip.files).find(
-            (p) => p.toLowerCase().endsWith(".pdf") && !innerZip.files[p].dir
-          );
-          if (innerPdf) {
-            try {
-              const pdfBuffer = await innerZip.files[innerPdf].async("nodebuffer");
-              const text = await parsePdf(pdfBuffer);
-              if (text && text.length > 30) return text;
-            } catch {
-              // continue to iwa parsing
-            }
-          }
-          const iwaFiles = Object.keys(innerZip.files)
-            .filter((p) => p.toLowerCase().endsWith(".iwa"))
-            .sort((a, b) => (a.toLowerCase().includes("document") ? -1 : b.toLowerCase().includes("document") ? 1 : 0));
+      // Remove repeated words
+      cleaned = cleaned.replace(/\b(\w+)(\s+\1)+\b/gi, "$1");
 
-          const strings: string[] = [];
-          const { parseIwa } = await import("keynote-parser2");
+      // Clean up whitespace
+      cleaned = cleaned.replace(/\s+/g, " ").trim();
 
-          const visit = (val: any) => {
-            if (!val) return;
-            if (typeof val === "string") {
-              const normalized = normalizeText(val);
-              if (normalized.length > 0) strings.push(normalized);
-              return;
-            }
-            if (Array.isArray(val)) {
-              val.forEach(visit);
-              return;
-            }
-            if (typeof val === "object") {
-              for (const v of Object.values(val)) visit(v);
-            }
-          };
+      // Remove very short "sentences" (less than 20 chars between periods)
+      cleaned = cleaned.replace(/\.\s*[^.]{1,20}\s*\./g, ". ");
 
-          for (const iwaPath of iwaFiles) {
-            try {
-              const data = await innerZip.files[iwaPath].async("uint8array");
-              try {
-                const parsed = parseIwa(Buffer.from(data));
-                visit(parsed);
-              } catch {
-                const fallback = extractProtobufText(data);
-                if (fallback.length > 0) strings.push(fallback);
-              }
-            } catch {
-              // ignore and continue
-            }
-          }
+      return cleaned;
+    };
 
-          const filtered = filterMeaningfulStrings(strings);
-          const merged = normalizeText(filtered.join(" "));
-          if (merged.length > 0) return merged;
-        } catch {
-          // fallback to other methods
-        }
-      }
+    // Extract readable sentences from garbled protobuf text
+    const extractSentences = (text: string): string => {
+      // First clean the text
+      const cleaned = cleanIWorkText(text);
 
-      // 3) Legacy iWork files ship index.apxl XML
-      const apxlPath = paths.find((p) => p.toLowerCase().endsWith("index.apxl"));
-      if (apxlPath) {
-        const xml = await zip.files[apxlPath].async("string");
-        const text = xml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-        if (text) return text;
-      }
+      // Find sequences of words that form readable sentences (5+ words of 3+ chars each)
+      const sentencePattern = /(?:[A-Za-z]{3,}\s+){4,}[A-Za-z]{3,}/g;
+      const matches = cleaned.match(sentencePattern) || [];
 
-      // 4) Any other XML/TXT payloads as last resort
-      for (const path of Object.keys(zip.files)) {
-        const file = zip.files[path] as ZipObject;
-        if (!file || file.dir) continue;
-        const lower = path.toLowerCase();
-        if (lower.endsWith(".txt")) {
-          const txt = (await file.async("string")).trim();
-          if (txt) return txt;
-        }
-        if (lower.endsWith(".xml")) {
-          const xml = await file.async("string");
-          const text = xml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-          if (text.length > 50) return text;
-        }
-      }
+      // Join and deduplicate
+      const seen = new Set<string>();
+      const unique = matches.filter(m => {
+        const normalized = m.toLowerCase().trim();
+        if (seen.has(normalized)) return false;
+        seen.add(normalized);
+        return true;
+      });
 
-      throw new Error("Could not extract text from iWork archive");
+      return unique.join(". ").replace(/\s+/g, " ").trim();
     };
 
     // --- Routing logic ---------------------------------------------------
+    // PDF files
     if (mime.includes("pdf") || looksLikePdf) {
-      return await parsePdf(buffer);
+      try {
+        return await parsePdf(buffer);
+      } catch (e) {
+        throw new Error("Failed to parse PDF. The file may be corrupted or password-protected.");
+      }
     }
 
+    // HTML files (check before text/* since text/html is a subtype)
+    if (mime.includes("text/html") || mime.includes("application/xhtml") || looksLikeHtml) {
+      const result = parseHtml(buffer);
+      return result.text;
+    }
+
+    // Markdown files
+    if (mime.includes("text/markdown") || mime.includes("text/x-markdown")) {
+      const result = parseMarkdown(buffer);
+      return result.text;
+    }
+
+    // Word documents (DOCX)
     if (mime.includes("wordprocessingml")) {
-      return await parseDocx(buffer);
+      try {
+        const result = await parseDocx(buffer);
+        return result.text;
+      } catch (e) {
+        throw new Error("Failed to parse Word document. The file may be corrupted.");
+      }
     }
 
+    // PowerPoint presentations
     if (mime.includes("presentationml")) {
-      return await parsePptx(buffer);
+      try {
+        return await parsePptx(buffer);
+      } catch (e) {
+        throw new Error("Failed to parse PowerPoint file. The file may be corrupted.");
+      }
     }
 
+    // OpenDocument Text (ODT)
+    if (mime.includes("opendocument.text") || mime.includes("application/vnd.oasis.opendocument.text")) {
+      try {
+        return await parseOdt(buffer);
+      } catch (e) {
+        throw new Error("Failed to parse ODT file. The file may be corrupted or in an unsupported format.");
+      }
+    }
+
+    // RTF files
     if (mime.includes("rtf")) {
       return stripRtf(parsePlain(buffer));
     }
 
+    // Plain text files (including .txt)
     if (mime.startsWith("text/")) {
       return parsePlain(buffer);
     }
 
-    if (
-      mime.includes("apple.pages") ||
-      mime.includes("iwork-pages") ||
-      mime.includes("apple.keynote") ||
-      mime.includes("iwork-keynote")
-    ) {
-      const JSZip = (await import("jszip")).default;
-      const zip = await JSZip.loadAsync(buffer);
-      return await parseIWork(zip);
-    }
-
+    // ZIP-based format detection (fallback for files with incorrect MIME types)
     if (isZipMagic) {
       const JSZip = (await import("jszip")).default;
       const zip = await JSZip.loadAsync(buffer);
       const paths = Object.keys(zip.files);
 
+      // DOCX detection
       if (paths.some((p) => p.startsWith("word/"))) {
-        return await parseDocx(buffer);
+        try {
+          const result = await parseDocx(buffer);
+          return result.text;
+        } catch (e) {
+          throw new Error("Failed to parse Word document. The file may be corrupted.");
+        }
       }
 
+      // PPTX detection
       if (paths.some((p) => p.startsWith("ppt/"))) {
-        return await parsePptx(buffer, zip);
+        try {
+          return await parsePptx(buffer, zip);
+        } catch (e) {
+          throw new Error("Failed to parse PowerPoint file. The file may be corrupted.");
+        }
       }
 
-      if (paths.some((p) => p.toLowerCase().endsWith(".iwa") || p.toLowerCase().includes("index.zip") || p.toLowerCase().includes("index.apxl"))) {
-        return await parseIWork(zip);
+      // ODT detection (OpenDocument)
+      if (paths.some((p) => p === "content.xml" || p === "mimetype")) {
+        try {
+          return await parseOdt(buffer);
+        } catch (e) {
+          throw new Error("Failed to parse OpenDocument file. Try exporting as PDF or DOCX.");
+        }
       }
+
     }
 
-    throw new Error("Unsupported or unrecognized file type");
+    // Unsupported file type - provide helpful guidance
+    throw new Error(
+      "Unsupported file format. Please upload one of: PDF, DOCX, PPTX, ODT, HTML, Markdown, TXT, or RTF."
+    );
   },
 });

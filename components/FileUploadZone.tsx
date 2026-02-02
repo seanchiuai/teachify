@@ -18,13 +18,14 @@ const ACCEPTED_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-powerpoint",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "application/vnd.apple.pages",
-  "application/x-iwork-pages-sffpages",
-  "application/vnd.apple.keynote",
-  "application/x-iwork-keynote-sffkey",
+  "application/vnd.oasis.opendocument.text",
   "text/plain",
   "text/rtf",
   "application/rtf",
+  "text/html",
+  "application/xhtml+xml",
+  "text/markdown",
+  "text/x-markdown",
 ];
 
 const ACCEPTED_EXTENSIONS = [
@@ -33,11 +34,12 @@ const ACCEPTED_EXTENSIONS = [
   ".pptx",
   ".doc",
   ".docx",
-  ".pages",
-  ".key",
   ".txt",
   ".rtf",
   ".md",
+  ".odt",
+  ".html",
+  ".htm",
 ];
 
 function isAcceptedFile(file: File): boolean {
@@ -45,10 +47,7 @@ function isAcceptedFile(file: File): boolean {
   const typeLower = (file.type || "").toLowerCase();
   const hasAcceptedExt = ACCEPTED_EXTENSIONS.some((ext) => nameLower.endsWith(ext));
   const validMime = ACCEPTED_TYPES.some((mime) => typeLower === mime || typeLower.startsWith(mime));
-  const isIWorkZip =
-    (typeLower === "application/zip" || nameLower.endsWith(".zip")) &&
-    (nameLower.includes(".pages") || nameLower.includes(".key"));
-  return validMime || hasAcceptedExt || isIWorkZip;
+  return validMime || hasAcceptedExt;
 }
 
 export function FileUploadZone({
@@ -146,7 +145,7 @@ export function FileUploadZone({
     >
       <input
         type="file"
-        accept=".pdf,.ppt,.pptx,.doc,.docx,.pages,.key,.txt,.rtf,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.apple.pages,application/x-iwork-pages-sffpages,application/vnd.apple.keynote,application/x-iwork-keynote-sffkey,text/plain,application/rtf,text/rtf,application/zip"
+        accept=".pdf,.ppt,.pptx,.doc,.docx,.txt,.rtf,.md,.odt,.html,.htm,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.oasis.opendocument.text,text/plain,application/rtf,text/rtf,text/html,application/xhtml+xml,text/markdown"
         onChange={handleInputChange}
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
       />
@@ -187,12 +186,12 @@ export function FileUploadZone({
                 or <span className="text-highlight-purple font-medium">browse</span> to upload
               </p>
             </div>
-            <div className="flex justify-center gap-2">
+            <div className="flex flex-wrap justify-center gap-2">
               <Badge variant="blue">PDF</Badge>
               <Badge variant="yellow">PPT/PPTX</Badge>
               <Badge variant="green">DOC/DOCX</Badge>
-              <Badge variant="purple">Pages/Keynote</Badge>
-              <Badge variant="pink">TXT/RTF</Badge>
+              <Badge variant="purple">ODT</Badge>
+              <Badge variant="pink">HTML/MD/TXT</Badge>
             </div>
           </div>
         )}
