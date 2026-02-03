@@ -36,7 +36,7 @@ test.describe('Full Game Flow - Teacher & Student', () => {
 
     // Navigate to home page and use browser console to create test game
     await teacherPage.goto('/');
-    await expect(teacherPage.locator('h1')).toContainText('LessonPlay');
+    await expect(teacherPage.locator('h1')).toContainText('Transform Lessons');
 
     // Create test game via Convex mutation
     const convexUrl = 'https://dusty-sturgeon-934.convex.cloud';
@@ -310,8 +310,9 @@ test.describe('Edge Cases', () => {
     console.log('\n🏠 Testing home page...');
     await page.goto('/');
 
-    await expect(page.locator('h1')).toContainText('LessonPlay');
-    await expect(page.locator('textarea').first()).toBeVisible();
+    await expect(page.locator('h1')).toContainText('Transform Lessons');
+    // Check for CTA buttons on landing page
+    await expect(page.locator('text=Create a Game').first()).toBeVisible();
     console.log('✅ Home page loads correctly!');
   });
 
